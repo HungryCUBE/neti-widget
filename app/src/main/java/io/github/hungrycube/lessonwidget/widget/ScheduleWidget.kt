@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
+import android.util.Log
 import android.util.TypedValue
 import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
@@ -32,9 +33,11 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import io.github.hungrycube.lessonwidget.R
+import io.github.hungrycube.lessonwidget.core.display.DisplayBuilder
 import io.github.hungrycube.lessonwidget.core.display.Phase
 import io.github.hungrycube.lessonwidget.render.CountdownSlot
 import io.github.hungrycube.lessonwidget.render.RenderMode
+import io.github.hungrycube.lessonwidget.render.Styles
 import io.github.hungrycube.lessonwidget.render.WidgetRenderer
 import io.github.hungrycube.lessonwidget.ui.MainActivity
 import io.github.hungrycube.lessonwidget.work.RefreshScheduler
@@ -61,15 +64,16 @@ private fun WidgetContent(context: Context, appWidgetId: Int, version: Long) {
     val size = LocalSize.current
     // version читается, чтобы открытая сессия перерисовывалась при каждом обновлении.
     val now = maxOf(System.currentTimeMillis(), version)
-    val state = Widgets.state(context, appWidgetId, now)
-    val rendered = WidgetRenderer(context).render(
-        style = state.style,
-        display = state.display,
-        widthDp = size.width.value,
-        heightDp = size.height.value,
-        mode = RenderMode.WIDGET,
-        nowMillis = now,
-    )
+    val renderer = WidgetRenderer(context)
+    // Любая ошибка (битый кэш и т.п.) — показываем «нет данных», а не «Не удалось загрузить виджет».
+    val (state, rendered) = runCatching {
+        val s = Widgets.state(context, appWidgetId, now)
+        s to renderer.render(s.style, s.display, size.width.value, size.height.value, RenderMode.WIDGET, nowMillis = now)
+    }.getOrElse {
+        Log.w("LessonWidget", "Не удалось нарисовать виджет", it)
+        val s = WidgetState(appWidgetId, null, Styles.MINIMAL, null, DisplayBuilder.build(null, "—", null, now))
+        s to renderer.render(s.style, s.display, size.width.value, size.height.value, RenderMode.WIDGET, nowMillis = now)
+    }
     val action = if (state.group != null && state.display.phase == Phase.NO_DATA) {
         actionRunCallback<RefreshAction>()
     } else {

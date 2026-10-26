@@ -201,7 +201,7 @@ private class Frame(
     fun nextParts(): Pair<String, String> {
         val n = d.next
         return when {
-            n != null -> "Далее · ${n.title}" to listOfNotNull(fmt(n.startMinute), n.room).joinToString(" · ")
+            n != null -> "Далее · ${n.title}" to listOfNotNull(fmt(n.startMinute), n.room?.takeIf { !narrow }).joinToString(" · ")
             f == null -> d.group.takeIf { it != "—" }.orEmpty() to (d.week?.let { "$it неделя" } ?: "")
             nextDay -> (d.message ?: "") to ""
             else -> "Дальше пар нет" to ""
@@ -863,11 +863,15 @@ private class Frame(
         if (bottomTop > contentBottom + 2f) {
             val n = d.next
             if (n != null) {
-                val right = listOfNotNull(fmt(n.startMinute), n.room).joinToString(" · ")
-                val rw2 = p.text(right, r, bottomTop, st.meta, pal.muted, Align.END) + 10f
                 var x = l
                 x += p.text("Далее", x, bottomTop, st.meta.weighted(700), pal.accent)
-                p.text(" ${n.title}", x, bottomTop, st.meta, pal.text, maxWidth = r - x - rw2)
+                if (narrow) {
+                    p.text(" ${fmt(n.startMinute)}", x, bottomTop, st.meta, pal.muted, maxWidth = r - x)
+                } else {
+                    val right = listOfNotNull(fmt(n.startMinute), n.room).joinToString(" · ")
+                    val rw2 = p.text(right, r, bottomTop, st.meta, pal.muted, Align.END) + 10f
+                    p.text(" ${n.title}", x, bottomTop, st.meta, pal.text, maxWidth = r - x - rw2)
+                }
             } else {
                 p.text(nextParts().first, l, bottomTop, st.meta, pal.muted, maxWidth = r - l)
             }
@@ -1058,7 +1062,7 @@ private class Frame(
         val gw: Float
         if (narrow) {
             // Узкий виджет: минуты — в строке с плашкой, вместо названия группы.
-            badge = d.week?.let { "$it неделя" } ?: d.dayLabel
+            badge = d.week?.let { "$it нед." } ?: if (f == null) d.status else d.dayLabel
             val w = rightText?.let { p.width(it, cdT) + 4f } ?: 0f
             if (rightText != null) {
                 if (d.countdownTo != null) {
@@ -1069,7 +1073,7 @@ private class Frame(
             }
             gw = w + 6f
         } else {
-            badge = d.week?.let { "$it учебная неделя" } ?: d.dayLabel
+            badge = d.week?.let { "$it учебная неделя" } ?: if (f == null) d.status else d.dayLabel
             val groupT = Typo(AppFont.MONTSERRAT, 11f, 600)
             gw = p.text(d.group, r, y + (badgeH - p.lineHeight(groupT)) / 2f, groupT, pal.text, Align.END, underline = true) + 10f
         }
@@ -1130,7 +1134,7 @@ private class Frame(
             }
             val n = d.next
             if (n != null) {
-                val right = listOfNotNull(fmt(n.startMinute), n.room).joinToString(" | ")
+                val right = listOfNotNull(fmt(n.startMinute), n.room?.takeIf { !narrow }).joinToString(" | ")
                 val rw = p.text(right, r, rowTop, st.meta, pal.text, Align.END) + 10f
                 p.text("Далее · ${n.title}", l, rowTop, st.meta, pal.text, maxWidth = r - l - rw)
             } else {
