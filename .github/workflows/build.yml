@@ -46,7 +46,7 @@ jobs:
 
       - name: Тесты и отладочная сборка
         run: |
-          gradle --no-daemon --stacktrace build \
+          gradle --no-daemon --stacktrace :core:test :app:testDebugUnitTest :app:assembleDebug \
             -PversionName=${{ steps.ver.outputs.name }} -PversionCode=${{ steps.ver.outputs.code }} \
             2>&1 | tee -a build.log
 
