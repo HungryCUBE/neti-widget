@@ -81,6 +81,7 @@ data class GroupSchedule(
 /** Группа из общего списка на сайте. */
 @Serializable
 data class GroupInfo(
+    /** Имя, как в адресе страницы расписания: «ИСТР-КН-61». */
     val name: String,
     val faculty: String,
     /** «Очное отделение», «Заочное отделение» … */
@@ -89,4 +90,6 @@ data class GroupInfo(
     val level: String,
     /** Номер курса или 0, если не указан. */
     val course: Int,
+    /** Подпись на сайте, бывает короче имени: «КН-61». */
+    val label: String = name,
 )

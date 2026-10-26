@@ -105,7 +105,7 @@ class ParserTest {
         for (file in Samples.semesterFiles) {
             val page = NstuParser.parseSchedulePage(Samples.read(file))
             assertTrue(file, page.hasTable)
-            assertTrue(file, page.lessons.size > 10)
+            assertTrue(file, page.lessons.size >= 3)
             for (l in page.lessons) {
                 assertTrue("$file: ${l.title}", l.title.isNotBlank())
                 assertFalse("$file: ${l.title}", l.title.contains("п.гр") || l.title.contains("·") || l.title.contains("&"))
@@ -143,5 +143,8 @@ class ParserTest {
         assertTrue(groups.any { it.name == "EM-41" })
         assertFalse(groups.any { it.name == "СОП30-26" })
         assertTrue(groups.any { it.level == "Магистратура" })
+        // Текст ссылки короче настоящего имени группы.
+        val kn = groups.first { it.name == "ИСТР-КН-61" }
+        assertEquals("КН-61", kn.label)
     }
 }

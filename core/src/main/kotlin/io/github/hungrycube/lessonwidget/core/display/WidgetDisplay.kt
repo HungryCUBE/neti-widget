@@ -221,9 +221,9 @@ object DisplayBuilder {
     private fun minutesUntil(now: Long, target: Long): Int =
         ceil((target - now).coerceAtLeast(0) / 60_000.0).toInt()
 
-    fun dayLabel(date: LocalDate, today: LocalDate): String = when (date) {
-        today -> "Сегодня"
-        today.plusDays(1) -> "Завтра"
+    fun dayLabel(date: LocalDate, today: LocalDate): String = when {
+        date.isEqual(today) -> "Сегодня"
+        date.isEqual(today.plusDays(1)) -> "Завтра"
         else -> "${WEEKDAYS[date.dayOfWeek.value - 1]}, ${date.dayOfMonth} ${MONTHS[date.monthValue - 1]}"
     }
 

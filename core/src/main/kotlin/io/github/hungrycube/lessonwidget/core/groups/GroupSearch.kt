@@ -32,13 +32,15 @@ object GroupSearch {
         if (keys.isEmpty()) return emptyList()
         return groups
             .mapNotNull { g ->
-                val gk = key(g.name)
+                val names = listOf(key(g.name), key(g.label)).distinct()
                 val score = keys.minOf { k ->
-                    when {
-                        gk == k -> 0
-                        gk.startsWith(k) -> 1
-                        gk.contains(k) -> 2
-                        else -> 9
+                    names.minOf { gk ->
+                        when {
+                            gk == k -> 0
+                            gk.startsWith(k) -> 1
+                            gk.contains(k) -> 2
+                            else -> 9
+                        }
                     }
                 }
                 if (score < 9) g to score else null

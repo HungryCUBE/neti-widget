@@ -53,3 +53,15 @@ class GroupSearchTest {
         assertEquals("EM-41", GroupSearch.urlEncode("EM-41"))
     }
 }
+
+class ShortNamesTest {
+    @Test
+    fun shortens() {
+        assertEquals("Матанализ", io.github.hungrycube.lessonwidget.core.display.ShortNames.shorten("Математический анализ"))
+        assertEquals(
+            "Теория случайных процессов",
+            io.github.hungrycube.lessonwidget.core.display.ShortNames.shorten("Теория случайных процессов (Дисциплина по выбору)"),
+        )
+        assertEquals("Физика / Матанализ", io.github.hungrycube.lessonwidget.core.display.ShortNames.shorten("Физика / Математический анализ"))
+    }
+}

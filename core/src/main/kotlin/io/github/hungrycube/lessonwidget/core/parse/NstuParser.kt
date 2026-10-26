@@ -6,6 +6,7 @@ import io.github.hungrycube.lessonwidget.core.model.Parity
 import io.github.hungrycube.lessonwidget.core.model.WeekFilter
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import java.net.URLDecoder
 import java.time.LocalDate
 
 /** Результат разбора страницы расписания группы (недельной или «весь семестр»). */
@@ -175,9 +176,10 @@ object NstuParser {
                                 val courseNo = course.selectFirst(".schedule__faculty-course__title")
                                     ?.text()?.let { Regex("""\d+""").find(it)?.value?.toIntOrNull() } ?: 0
                                 for (a in course.select("a.schedule__faculty-groups__item")) {
-                                    val name = a.text().clean()
+                                    val label = a.text().clean()
+                                    val name = groupFromHref(a.attr("href")) ?: label
                                     if (name.isNotEmpty() && seen.add(name)) {
-                                        result += GroupInfo(name, facultyName, form, level, courseNo)
+                                        result += GroupInfo(name, facultyName, form, level, courseNo, label)
                                     }
                                 }
                             }
@@ -189,11 +191,19 @@ object NstuParser {
         // На случай изменения вёрстки: любые ссылки на расписание группы.
         if (result.isEmpty()) {
             for (a in doc.select("a[href*=schedule?group=]")) {
-                val name = a.text().clean()
-                if (name.isNotEmpty() && seen.add(name)) result += GroupInfo(name, "", "", "", 0)
+                val label = a.text().clean()
+                val name = groupFromHref(a.attr("href")) ?: label
+                if (name.isNotEmpty() && seen.add(name)) result += GroupInfo(name, "", "", "", 0, label)
             }
         }
         return result
+    }
+
+    /** «…/schedule?group=ИСТР-КН-61» → «ИСТР-КН-61». */
+    private fun groupFromHref(href: String): String? {
+        val raw = href.substringAfter("group=", "").substringBefore('&').substringBefore('#')
+        if (raw.isEmpty()) return null
+        return runCatching { URLDecoder.decode(raw, "UTF-8") }.getOrDefault(raw).clean().ifEmpty { null }
     }
 
     private fun String.clean(): String =
