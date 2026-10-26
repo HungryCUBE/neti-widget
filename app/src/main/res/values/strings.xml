@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_name">Расписание пар</string>
+    <string name="widget_description">Текущая и следующая пара твоей группы НГТУ НЭТИ</string>
+</resources>

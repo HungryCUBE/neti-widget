@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Превью в списке виджетов (Android 12+): стиль «Минимализм». -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/preview_card"
+    android:orientation="vertical"
+    android:paddingStart="18dp"
+    android:paddingTop="16dp"
+    android:paddingEnd="18dp"
+    android:paddingBottom="14dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/inter_tight"
+        android:text="10:15 — 11:45"
+        android:textColor="#8C887F"
+        android:textSize="12sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/inter_tight"
+        android:letterSpacing="-0.035"
+        android:text="Матанализ"
+        android:textColor="#141414"
+        android:textSize="28sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/inter_tight"
+        android:text="7-305 · практика"
+        android:textColor="#6D6962"
+        android:textSize="13sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="#E9E5DC">
+
+        <View
+            android:layout_width="150dp"
+            android:layout_height="2dp"
+            android:background="#141414" />
+    </FrameLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/inter_tight"
+        android:text="Далее — Физика, 12:00"
+        android:textColor="#8C887F"
+        android:textSize="12sp" />
+</LinearLayout>

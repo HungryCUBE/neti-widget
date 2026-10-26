@@ -70,6 +70,7 @@ android {
             all {
                 it.systemProperty("robolectric.graphicsMode", "NATIVE")
                 it.systemProperty("screenshots.dir", layout.buildDirectory.dir("screenshots").get().asFile.absolutePath)
+                it.systemProperty("samples.dir", rootProject.file("samples").absolutePath)
                 it.testLogging {
                     events("failed")
                     exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

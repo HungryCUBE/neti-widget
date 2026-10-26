@@ -15,5 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "neti-widget"
-include(":core")
-if (file("app").exists()) include(":app")
+include(":core", ":app")

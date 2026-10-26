@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Обратный отсчёт: системный Chronometer тикает сам, без обновлений виджета. -->
+<Chronometer xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/countdown"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fontFamily="@font/inter_tight"
+    android:fontVariationSettings="'wght' 600"
+    android:gravity="end|center_vertical"
+    android:includeFontPadding="false"
+    android:maxLines="1"
+    android:textColor="#FFFFFFFF"
+    android:textSize="12dp" />

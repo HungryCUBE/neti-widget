@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Превью в списке виджетов для Android 8–11. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="316dp"
+    android:height="168dp"
+    android:viewportWidth="316"
+    android:viewportHeight="168">
+    <path
+        android:fillColor="#FBFAF7"
+        android:pathData="M26,0h264a26,26 0,0 1,26 26v116a26,26 0,0 1,-26 26h-264a26,26 0,0 1,-26 -26v-116a26,26 0,0 1,26 -26z" />
+    <path android:fillColor="#8C887F" android:pathData="M18,18h70v8h-70z" />
+    <path android:fillColor="#141414" android:pathData="M18,36h150v22h-150z" />
+    <path android:fillColor="#6D6962" android:pathData="M18,66h96v9h-96z" />
+    <path android:fillColor="#E9E5DC" android:pathData="M18,128h280v2h-280z" />
+    <path android:fillColor="#141414" android:pathData="M18,128h174v2h-174z" />
+    <path android:fillColor="#8C887F" android:pathData="M18,140h130v8h-130z" />
+</vector>
