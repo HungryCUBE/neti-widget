@@ -48,7 +48,9 @@ class WidgetConfigs(context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
 
     fun get(appWidgetId: Int): WidgetConfig? =
-        prefs.getString(key(appWidgetId), null)?.let { runCatching { json.decodeFromString<WidgetConfig>(it) }.getOrNull() }
+        prefs.getString(key(appWidgetId), null)?.let {
+            runCatching { json.decodeFromString(WidgetConfig.serializer(), it) }.getOrNull()
+        }
 
     fun set(appWidgetId: Int, config: WidgetConfig) =
         prefs.edit { putString(key(appWidgetId), json.encodeToString(WidgetConfig.serializer(), config)) }

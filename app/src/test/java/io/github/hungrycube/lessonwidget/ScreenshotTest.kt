@@ -65,7 +65,7 @@ class ScreenshotTest {
     }
 
     private fun render(st: WidgetStyle, d: WidgetDisplay, w: Float, h: Float, now: Long, density: Float = 2f) =
-        renderer.render(st, d, w, h, RenderMode.PREVIEW, nowMillis = now, density = density).bitmap
+        renderer.render(st, d, w, h, RenderMode.PREVIEW, nowMillis = now, density = density, dynamicColor = false).bitmap
 
     @Test
     fun eachStyleLikeTheMockup() {

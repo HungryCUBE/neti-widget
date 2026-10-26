@@ -7,7 +7,6 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.text.TextPaint
-import android.text.TextUtils
 
 /** Текстовый стиль в dp. [tracking] — межбуквенный интервал в em, как letter-spacing в макете. */
 data class Typo(
@@ -68,11 +67,22 @@ class Painter(private val context: Context, val canvas: Canvas) {
 
     fun lineHeight(t: Typo, size: Float = t.size): Float = size * t.lineHeight
 
+    /** Обрезает строку с многоточием по ширине (замером, без TextUtils — одинаково везде). */
     fun ellipsize(text: String, t: Typo, maxWidth: Float, size: Float = t.size): String {
-        val p = paint(t, 0, size)
         val s = prepare(text, t)
         if (maxWidth <= 0f) return ""
-        return TextUtils.ellipsize(s, p, maxWidth, TextUtils.TruncateAt.END).toString()
+        val p = paint(t, 0, size)
+        if (p.measureText(s) <= maxWidth) return s
+        val ell = "…"
+        val ellW = p.measureText(ell)
+        if (ellW > maxWidth) return ""
+        var lo = 0
+        var hi = s.length
+        while (lo < hi) {
+            val mid = (lo + hi + 1) / 2
+            if (p.measureText(s, 0, mid) + ellW <= maxWidth) lo = mid else hi = mid - 1
+        }
+        return s.substring(0, lo).trimEnd() + ell
     }
 
     /**

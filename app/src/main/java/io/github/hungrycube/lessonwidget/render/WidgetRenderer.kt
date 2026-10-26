@@ -58,8 +58,10 @@ class WidgetRenderer(private val context: Context) {
         mode: RenderMode,
         nowMillis: Long = System.currentTimeMillis(),
         density: Float = context.resources.displayMetrics.density,
+        /** Цвета из обоев для Material You; false — палитра из макета. */
+        dynamicColor: Boolean = true,
     ): Rendered {
-        val st = style.resolved(context)
+        val st = if (dynamicColor) style.resolved(context) else style
         val w = widthDp.coerceAtLeast(80f)
         val h = heightDp.coerceAtLeast(80f)
         val margin = if (mode == RenderMode.PREVIEW) 20f else 0f
@@ -195,15 +197,26 @@ private class Frame(
         return CountdownSlot(x, y, w, h, layout, format, color, size)
     }
 
-    /** Левая и правая части строки «Далее». */
+    /** Левая и правая части строки «Далее». В пустых состояниях — группа и неделя. */
     fun nextParts(): Pair<String, String> {
         val n = d.next
         return when {
             n != null -> "Далее · ${n.title}" to listOfNotNull(fmt(n.startMinute), n.room).joinToString(" · ")
-            f == null -> "" to ""
+            f == null -> d.group.takeIf { it != "—" }.orEmpty() to (d.week?.let { "$it неделя" } ?: "")
             nextDay -> (d.message ?: "") to ""
             else -> "Дальше пар нет" to ""
         }
+    }
+
+    /** 125 → «2 ч 05 мин». */
+    fun duration(minutes: Int): String =
+        if (minutes >= 60) "%d ч %02d мин".format(minutes / 60, minutes % 60) else "$minutes мин"
+
+    /** Короткая метка состояния для узких виджетов: «3 пара», «Перемена», «Завтра». */
+    fun shortHeadline(): String = when {
+        isLesson -> f?.number?.let { "$it пара" } ?: d.status
+        nextDay -> d.dayLabel
+        else -> d.status
     }
 
     fun roundPath(l: Float, t: Float, r: Float, b: Float, radius: Float) =
@@ -299,14 +312,19 @@ private class Frame(
         val pillH = p.lineHeight(labelT) + 6f
 
         val cdColor = 0xD9FFFFFF.toInt()
+        // В узком виджете — без «ещё», чтобы влезла плашка.
+        val cdFormat = if (narrow) "%s" else "${countdownPrefix()} %s"
         val rightText: String? = when {
-            d.countdownTo != null -> "${countdownPrefix()} ${countdownSample()}"
+            d.countdownTo != null -> cdFormat.replace("%s", countdownSample())
             nextDay && f != null -> "в ${fmt(f.startMinute)}"
             else -> null
         }
         val rightW = rightText?.let { p.width(it, metaT) + 4f } ?: 0f
         val pillMax = r - l - rightW - 8f - 18f
-        val pillText = p.ellipsize(d.headline, labelT, pillMax)
+        val pillText = when {
+            p.width(d.headline, labelT) <= pillMax -> d.headline
+            else -> p.ellipsize(shortHeadline(), labelT, pillMax)
+        }
         val pw = p.width(pillText, labelT) + 18f
         p.roundRect(l, y, l + pw, y + pillH, pillH / 2f, 0x33FFFFFF)
         p.roundRectStroke(l, y, l + pw, y + pillH, pillH / 2f, 0x40FFFFFF)
@@ -314,7 +332,7 @@ private class Frame(
 
         var slot: CountdownSlot? = null
         if (d.countdownTo != null) {
-            slot = countdown(r - rightW, y, rightW, pillH, CountdownLayout.MANROPE_END, "${countdownPrefix()} %s", cdColor, metaT.size)
+            slot = countdown(r - rightW, y, rightW, pillH, CountdownLayout.MANROPE_END, cdFormat, cdColor, metaT.size)
         } else if (rightText != null) {
             p.text(rightText, r, y + (pillH - p.lineHeight(metaT)) / 2f, metaT, cdColor, Align.END)
         }
@@ -442,7 +460,7 @@ private class Frame(
 
     fun ring(): CountdownSlot? {
         card(pal.surface, pal.border)
-        val ringD = if (narrow || mainH < 140f) 60f else 76f
+        val ringD = if (narrow) 52f else if (mainH < 140f) 60f else 76f
         val ringW = if (ringD > 70f) 5f else 4.5f
         val y = top
         val cx = l + ringD / 2f
@@ -461,7 +479,7 @@ private class Frame(
         val small = Typo(AppFont.INTER_TIGHT, 9f, 500, lineHeight = 1.2f)
         var slot: CountdownSlot? = null
         if (d.countdownTo != null) {
-            val size = if (countdownSample().length > 5) 12f else if (ringD > 70f) 16f else 13f
+            val size = if (countdownSample().length > 5) (if (ringD > 70f) 12f else 9.5f) else if (ringD > 70f) 16f else 12.5f
             val boxW = ringD - 2 * ringW - 6f
             val boxH = size * 1.2f
             slot = countdown(cx - boxW / 2f, cy - boxH / 2f - 4f, boxW, boxH, CountdownLayout.INTER_TIGHT_CENTER, "%s", pal.text, size)
@@ -474,24 +492,38 @@ private class Frame(
             p.text("—", cx, cy - 10f, Typo(AppFont.INTER_TIGHT, 18f, 600, lineHeight = 1.1f), pal.muted, Align.CENTER)
         }
 
-        val x0 = l + ringD + 14f
+        val x0 = l + ringD + if (narrow) 10f else 14f
         val colW = r - x0
         val status = listOfNotNull(d.status, f?.number?.let { "$it пара" }).joinToString(" · ")
         val labelLh = p.lineHeight(st.label)
         val bodyLh = p.lineHeight(st.body)
-        val fitted = p.fit(d.title, st.heading, colW, ringD + 16f - labelLh - bodyLh)
-        val colH = labelLh + 2f + fitted.height + 2f + bodyLh
-        var ty = max(y, cy - colH / 2f)
-        p.text(status, x0, ty, st.label, pal.muted, maxWidth = colW)
-        ty += labelLh + 2f
-        p.drawFitted(fitted, x0, ty, pal.text)
-        ty += fitted.height + 2f
         val details = if (f == null) d.message ?: "" else roomAndType()
-        p.text(details, x0, ty, st.body, pal.muted, maxWidth = colW)
+        var contentBottom = y + ringD
+        if (narrow) {
+            // Узкий виджет: справа от кольца — статус и аудитория, название — под кольцом.
+            var ty = cy - (labelLh + bodyLh) / 2f
+            p.text(d.status, x0, ty, st.label, pal.muted, maxWidth = colW)
+            ty += labelLh
+            p.text(f?.room ?: f?.number?.let { "$it пара" } ?: "", x0, ty, st.body, pal.muted, maxWidth = colW)
+            val titleTop = y + ringD + 6f
+            val fitted = p.fit(d.title, st.heading.sized(17f), r - l, mainBottom - titleTop)
+            p.drawFitted(fitted, l, titleTop, pal.text)
+            contentBottom = titleTop + fitted.height
+        } else {
+            val fitted = p.fit(d.title, st.heading, colW, ringD + 16f - labelLh - bodyLh)
+            val colH = labelLh + 2f + fitted.height + 2f + bodyLh
+            var ty = max(y, cy - colH / 2f)
+            p.text(status, x0, ty, st.label, pal.muted, maxWidth = colW)
+            ty += labelLh + 2f
+            p.drawFitted(fitted, x0, ty, pal.text)
+            ty += fitted.height + 2f
+            p.text(details, x0, ty, st.body, pal.muted, maxWidth = colW)
+            contentBottom = max(contentBottom, ty + bodyLh)
+        }
 
         val metaLh = p.lineHeight(st.meta)
         val rowTop = mainBottom - metaLh
-        if (rowTop - 11f > y + ringD + 4f) {
+        if (rowTop - 11f > contentBottom + 4f) {
             p.rect(l, rowTop - 10f, r, rowTop - 9f, pal.container)
             val n = d.next
             if (n != null) {
@@ -561,6 +593,8 @@ private class Frame(
                 bx += p.text("█".repeat(filled), bx, y, mono, pal.text)
                 bx += p.text("█".repeat(n - filled), bx, y, mono, pal.track)
                 p.text(pct, bx, y, mono, pal.secondary)
+            } else if (upcoming && d.minutesLeft != null) {
+                p.text("# через ${duration(d.minutesLeft!!)}", l, y, mono, pal.muted, maxWidth = r - l)
             } else if (nextDay && d.message != null) {
                 p.text("# " + d.message!!.lowercase(), l, y, mono, pal.muted, maxWidth = r - l)
             }
@@ -571,8 +605,7 @@ private class Frame(
             val n = d.next
             val nextText = when {
                 n != null -> "next → " + listOfNotNull(fmt(n.startMinute), n.title, n.typeShort?.let { "[$it]" }, n.room).joinToString(" ")
-                upcoming && d.minutesLeft != null -> "через ${d.minutesLeft} мин"
-                f == null -> "нажми, чтобы обновить".takeIf { d.phase == Phase.NO_DATA } ?: ""
+                d.phase == Phase.NO_DATA -> "нажми, чтобы обновить"
                 else -> "next → —"
             }
             val cursor = " ▍"
@@ -603,15 +636,15 @@ private class Frame(
         val ib = innerB - 13f
 
         // Иконка в тональной плашке
-        val iconBox = 36f
-        p.roundRect(il, it, il + iconBox, it + iconBox, 12f, pal.accent)
-        drawIcon(iconFor(), il + iconBox / 2f, it + iconBox / 2f, 18f, 0xFFFFFFFF.toInt())
+        val iconBox = if (narrow) 28f else 36f
+        p.roundRect(il, it, il + iconBox, it + iconBox, if (narrow) 9f else 12f, pal.accent)
+        drawIcon(iconFor(), il + iconBox / 2f, it + iconBox / 2f, iconBox / 2f, 0xFFFFFFFF.toInt())
 
-        // Чип аудитории
+        // Чип аудитории (в узком виджете аудитория уходит в подпись)
         val chipT = st.label
         val room = f?.room
         var chipW = 0f
-        if (room != null) {
+        if (room != null && !narrow) {
             val maxChip = (ir - il) * 0.38f
             val text = p.ellipsize(room, chipT, maxChip - 20f)
             chipW = p.width(text, chipT) + 20f
@@ -625,13 +658,15 @@ private class Frame(
         val colW = ir - (if (chipW > 0f) chipW + 8f else 0f) - colX
         val rowH = p.lineHeight(st.body)
         val subLh = p.lineHeight(st.body)
-        val fitted = p.fit(d.title, st.heading, colW, ib - it - rowH - 6f - subLh)
+        val headT = if (narrow) st.heading.sized(16f) else st.heading
+        val fitted = p.fit(d.title, headT, colW, ib - it - rowH - 6f - subLh)
         val colH = fitted.height + subLh
         var cy = it + max(0f, (iconBox - colH) / 2f)
         p.drawFitted(fitted, colX, cy, pal.onContainer)
         cy += fitted.height
         val sub = when {
             f == null -> d.message ?: ""
+            narrow -> listOfNotNull(f.room, until()).joinToString(" · ")
             nextDay -> listOfNotNull(f.type?.replaceFirstChar { c -> c.uppercase() }, "${d.dayLabel} в ${fmt(f.startMinute)}").joinToString(" · ")
             else -> listOfNotNull(f.type?.replaceFirstChar { c -> c.uppercase() } ?: d.status, until()).joinToString(" · ")
         }
@@ -769,7 +804,7 @@ private class Frame(
         val lh = p.lineHeight(labelT)
         p.circle(l + 3.5f, y + lh / 2f, 3.5f, pal.accent)
         val status = if (nextDay) d.dayLabel else d.status
-        val rangeText = f?.let { range(it, "—") }
+        val rangeText = f?.let { range(it, "—") }?.takeIf { !narrow }
         val rw = rangeText?.let { p.text(it, r, y, labelT.weighted(700), pal.muted, Align.END) + 10f } ?: 0f
         p.text(status, l + 13f, y, labelT, pal.text, maxWidth = r - l - 13f - rw)
         y += lh + 8f
@@ -777,7 +812,7 @@ private class Frame(
         // Крупные точечные цифры: отсчёт, время начала или прочерк.
         val big = d.countdownTo != null
         val sample = if (big) countdownSample() else f?.let { fmt(it.startMinute) } ?: "--"
-        val maxNumW = (r - l) * (if (narrow) 0.62f else 0.5f)
+        val maxNumW = (r - l) * (if (narrow) 1f else 0.5f)
         var size = if (narrow) 34f else 44f
         val numT = Typo(AppFont.DOTO, size, 900, tracking = -0.03f, lineHeight = 1f, tabular = true)
         val wAt = p.width(sample, numT)
@@ -790,13 +825,14 @@ private class Frame(
         } else {
             p.text(sample, l, y, numT.sized(size), pal.text)
         }
-        val colX = l + numW + 12f
+        // Название — справа от цифр, а в узком виджете — под ними.
+        val colX = if (narrow) l else l + numW + 12f
         val colW = r - colX
         val subT = st.body
         val subLh = p.lineHeight(subT)
-        val fitted = p.fit(d.title, st.heading, colW, heroH - subLh - 3f + 6f)
+        val fitted = p.fit(d.title, st.heading, colW, if (narrow) p.lineHeight(st.heading) else heroH - subLh - 3f + 6f)
         val colH = fitted.height + 3f + subLh
-        var cy = y + heroH - colH
+        var cy = if (narrow) y + heroH + 4f else y + heroH - colH
         p.drawFitted(fitted, colX, cy, pal.text)
         cy += fitted.height + 3f
         val sub = when {
@@ -804,12 +840,13 @@ private class Frame(
             else -> listOfNotNull(f.typeShort, f.room).joinToString(" · ")
         }
         p.text(sub, colX, cy, subT, pal.muted, maxWidth = colW)
+        val contentBottom = if (narrow) cy + subLh else y + heroH
 
         val metaLh = p.lineHeight(st.meta)
         val bottomTop = mainBottom - metaLh
         val dotsY = bottomTop - 10f - 7f
-        if (dotsY > y + heroH + 4f) {
-            val count = 24
+        if (dotsY > contentBottom + 4f) {
+            val count = min(24, floor((r - l - 7f) / 9f).toInt() + 1)
             val step = (r - l - 7f) / (count - 1)
             val prog = d.progress
             val current = prog?.let { floor(it * count).toInt().coerceIn(0, count - 1) } ?: -1
@@ -823,7 +860,7 @@ private class Frame(
                 p.circle(l + 3.5f + i * step, dotsY + 3.5f, 3.5f, c)
             }
         }
-        if (bottomTop > y + heroH + 2f) {
+        if (bottomTop > contentBottom + 2f) {
             val n = d.next
             if (n != null) {
                 val right = listOfNotNull(fmt(n.startMinute), n.room).joinToString(" · ")
@@ -938,7 +975,7 @@ private class Frame(
         }
         val line2 = when {
             f == null -> d.message ?: ""
-            nextDay -> listOfNotNull(f.room?.let { "Ауд. $it" }, "${d.dayLabel} · ${range(f, " → ")}").joinToString(" · ")
+            nextDay -> listOfNotNull(f.room?.let { "Ауд. $it" }, range(f, " → ")).joinToString(" · ")
             else -> listOfNotNull(f.room?.let { "Ауд. $it" }, range(f, " → ")).joinToString(" · ")
         }
         p.text(line2, cx, y + p.lineHeight(titleT) + 1f, small, pal.text, maxWidth = br - cx)
@@ -971,8 +1008,8 @@ private class Frame(
             }
             val bw = button(btnText, br, y, small)
             val rowText = when {
-                isLesson && d.minutesLeft != null -> "Осталось примерно ${d.minutesLeft} мин"
-                upcoming && d.minutesLeft != null -> "До начала примерно ${d.minutesLeft} мин"
+                isLesson && d.minutesLeft != null -> "Осталось примерно ${duration(d.minutesLeft!!)}"
+                upcoming && d.minutesLeft != null -> "До начала примерно ${duration(d.minutesLeft!!)}"
                 nextDay && f != null -> "${d.dayLabel} в ${fmt(f.startMinute)}"
                 else -> d.message ?: ""
             }
@@ -1007,10 +1044,35 @@ private class Frame(
         card(pal.surface, pal.border)
         var y = top
         val badgeT = st.label
-        val badge = d.week?.let { "$it учебная неделя" } ?: d.dayLabel
         val badgeH = p.lineHeight(badgeT) + 6f
-        val groupT = Typo(AppFont.MONTSERRAT, 11f, 600)
-        val gw = p.text(d.group, r, y + (badgeH - p.lineHeight(groupT)) / 2f, groupT, pal.text, Align.END, underline = true) + 10f
+        val cdT = CountdownLayout.MONTSERRAT_END.typo(
+            if (narrow) 13f else if (countdownSample().length > 5) 18f else 22f,
+        )
+        val rightText: String? = when {
+            d.countdownTo != null -> countdownSample()
+            nextDay && f != null -> fmt(f.startMinute)
+            else -> null
+        }
+        var slot: CountdownSlot? = null
+        val badge: String
+        val gw: Float
+        if (narrow) {
+            // Узкий виджет: минуты — в строке с плашкой, вместо названия группы.
+            badge = d.week?.let { "$it неделя" } ?: d.dayLabel
+            val w = rightText?.let { p.width(it, cdT) + 4f } ?: 0f
+            if (rightText != null) {
+                if (d.countdownTo != null) {
+                    slot = countdown(r - w, y, w, badgeH, CountdownLayout.MONTSERRAT_END, "%s", pal.text, cdT.size)
+                } else {
+                    p.text(rightText, r, y + (badgeH - p.lineHeight(cdT)) / 2f, cdT, pal.text, Align.END)
+                }
+            }
+            gw = w + 6f
+        } else {
+            badge = d.week?.let { "$it учебная неделя" } ?: d.dayLabel
+            val groupT = Typo(AppFont.MONTSERRAT, 11f, 600)
+            gw = p.text(d.group, r, y + (badgeH - p.lineHeight(groupT)) / 2f, groupT, pal.text, Align.END, underline = true) + 10f
+        }
         val bt = p.ellipsize(badge, badgeT, r - l - gw - 14f)
         val bw = p.width(bt, badgeT) + 14f
         p.rect(l, y, l + bw, y + badgeH, pal.container)
@@ -1018,23 +1080,16 @@ private class Frame(
         y += badgeH + 8f
 
         // Название и минуты справа
-        val cdT = CountdownLayout.MONTSERRAT_END.typo(if (countdownSample().length > 5) 18f else 22f)
-        val rightText: String? = when {
-            d.countdownTo != null -> countdownSample()
-            nextDay && f != null -> fmt(f.startMinute)
-            else -> null
-        }
-        val rightW = rightText?.let { p.width(it, cdT) + 4f } ?: 0f
+        val rightW = if (narrow) 0f else rightText?.let { p.width(it, cdT) + 4f } ?: 0f
         val tagsH = p.lineHeight(st.body) + 6f
         val metaLh = p.lineHeight(st.meta)
         val bottomBlock = 5f + 9f + 2f + 6f + metaLh
         val showBottom = mainBottom - y >= p.lineHeight(st.heading) * 0.86f + 8f + tagsH + bottomBlock
         val titleMaxH = mainBottom - y - (if (showBottom) bottomBlock + 6f else 0f) - 8f - tagsH
-        val fitted = p.fit(d.title, st.heading, r - l - rightW - 12f, titleMaxH)
+        val fitted = p.fit(d.title, if (narrow) st.heading.sized(19f) else st.heading, r - l - rightW - (if (rightW > 0f) 12f else 0f), titleMaxH)
         p.drawFitted(fitted, l, y, pal.text)
-        var slot: CountdownSlot? = null
-        val rowH = max(fitted.height, cdT.size * 1.0f)
-        if (rightText != null) {
+        val rowH = if (narrow) fitted.height else max(fitted.height, cdT.size * 1.0f)
+        if (rightText != null && !narrow) {
             val cy = y + fitted.height - cdT.size * 1.0f
             if (d.countdownTo != null) {
                 slot = countdown(r - rightW, cy, rightW, cdT.size * 1.0f, CountdownLayout.MONTSERRAT_END, "%s", pal.text, cdT.size)

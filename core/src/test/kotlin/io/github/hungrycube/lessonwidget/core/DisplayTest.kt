@@ -121,6 +121,7 @@ class DisplayTest {
         assertEquals(Phase.NO_LESSONS, d.phase)
         assertEquals("Пар нет", d.title)
         assertEquals("Каникулы или сессия", d.message)
+        assertNull(d.week)
     }
 
     @Test

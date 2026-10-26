@@ -97,7 +97,8 @@ object DisplayBuilder {
         }
 
         val cal = ScheduleCalendar(schedule, subgroup)
-        val week = cal.weekOf(today)
+        // Вне учебных недель (каникулы, сессия) номер недели не показываем.
+        val week = cal.weekOf(today)?.takeIf { cal.isTeachingWeek(today) }
         val slots = cal.slotsOn(today)
 
         fun millis(slotTime: java.time.ZonedDateTime) = slotTime.toInstant().toEpochMilli()
