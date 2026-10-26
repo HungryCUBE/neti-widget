@@ -4,21 +4,16 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.SystemClock
 import android.util.Log
-import android.util.TypedValue
-import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.SizeMode
@@ -30,12 +25,8 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.layout.Box
 import androidx.glance.layout.ContentScale
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import io.github.hungrycube.lessonwidget.R
 import io.github.hungrycube.lessonwidget.core.display.DisplayBuilder
 import io.github.hungrycube.lessonwidget.core.display.Phase
-import io.github.hungrycube.lessonwidget.render.CountdownSlot
 import io.github.hungrycube.lessonwidget.render.RenderMode
 import io.github.hungrycube.lessonwidget.render.Styles
 import io.github.hungrycube.lessonwidget.render.WidgetRenderer
@@ -44,7 +35,8 @@ import io.github.hungrycube.lessonwidget.work.RefreshScheduler
 
 /**
  * Виджет на Glance. Вся картинка рисуется в Bitmap (шрифты, кольца, точки и градиенты
- * в RemoteViews иначе не передать), а обратный отсчёт — системный Chronometer поверх неё.
+ * в RemoteViews иначе не передать). Виджет перерисовывается на границах пар и раз в минуту,
+ * пока идёт отсчёт, — только при включённом экране.
  */
 class ScheduleWidget : GlanceAppWidget() {
 
@@ -86,28 +78,7 @@ private fun WidgetContent(context: Context, appWidgetId: Int, version: Long) {
             modifier = GlanceModifier.fillMaxSize(),
             contentScale = ContentScale.FillBounds,
         )
-        val slot = rendered.countdown
-        val target = state.display.countdownTo
-        if (slot != null && target != null) {
-            Box(modifier = GlanceModifier.fillMaxSize().padding(start = slot.x.dp, top = slot.y.dp)) {
-                AndroidRemoteViews(
-                    remoteViews = countdownViews(context, slot, target),
-                    modifier = GlanceModifier.size(slot.width.dp, slot.height.dp),
-                )
-            }
-        }
     }
-}
-
-/** Системный обратный отсчёт: тикает сам, виджет для этого не обновляется. */
-private fun countdownViews(context: Context, slot: CountdownSlot, target: Long): RemoteViews {
-    val rv = RemoteViews(context.packageName, slot.layout.layoutRes)
-    val base = SystemClock.elapsedRealtime() + (target - System.currentTimeMillis())
-    rv.setChronometer(R.id.countdown, base, slot.format, true)
-    rv.setChronometerCountDown(R.id.countdown, true)
-    rv.setTextColor(R.id.countdown, slot.color)
-    rv.setTextViewTextSize(R.id.countdown, TypedValue.COMPLEX_UNIT_DIP, slot.textSize)
-    return rv
 }
 
 fun openAppIntent(context: Context, appWidgetId: Int, group: String?): Intent =

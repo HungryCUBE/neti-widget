@@ -15,6 +15,7 @@ import io.github.hungrycube.lessonwidget.core.display.LineStatus
 import io.github.hungrycube.lessonwidget.core.display.Phase
 import io.github.hungrycube.lessonwidget.core.display.SlotInfo
 import io.github.hungrycube.lessonwidget.core.display.WidgetDisplay
+import io.github.hungrycube.lessonwidget.core.display.withVisibleCountdown
 import io.github.hungrycube.lessonwidget.core.time.formatMinute
 import kotlin.math.ceil
 import kotlin.math.cos
@@ -26,26 +27,13 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 enum class RenderMode {
-    /** Для виджета: фон прозрачный, обратный отсчёт — системным Chronometer поверх картинки. */
+    /** Для виджета: фон прозрачный (под карточкой — обои). */
     WIDGET,
     /** Для превью в приложении и скриншотов: с фоном-подложкой, отсчёт нарисован в картинке. */
     PREVIEW,
 }
 
-/** Место для системного обратного отсчёта поверх картинки, в dp от левого верхнего угла виджета. */
-data class CountdownSlot(
-    val x: Float,
-    val y: Float,
-    val width: Float,
-    val height: Float,
-    val layout: CountdownLayout,
-    /** Формат Chronometer: «ещё %s». */
-    val format: String,
-    val color: Int,
-    val textSize: Float,
-)
-
-class Rendered(val bitmap: Bitmap, val countdown: CountdownSlot?, val description: String)
+class Rendered(val bitmap: Bitmap, val description: String)
 
 /** Рисует виджет целиком в Bitmap. Один код и для рабочего стола, и для превью. */
 class WidgetRenderer(private val context: Context) {
@@ -82,9 +70,11 @@ class WidgetRenderer(private val context: Context) {
         canvas.scale(scale, scale)
         val painter = Painter(context, canvas)
         if (mode == RenderMode.PREVIEW) drawBackdrop(painter, st.backdrop, totalW, totalH)
-        canvas.translate(margin, margin)
-        val slot = Frame(painter, st, display, w, h, mode, nowMillis).draw()
-        return Rendered(bitmap, slot, describe(display))
+        // Android 12+ скругляет углы виджетов — квадратное окно Win95 отодвигаем от краёв, чтобы углы не срезались.
+        val inset = if (mode == RenderMode.WIDGET && st.layout == CardLayout.RETRO) 8f else 0f
+        canvas.translate(margin + inset, margin + inset)
+        Frame(painter, st, display, w - 2 * inset, h - 2 * inset, mode, nowMillis).draw()
+        return Rendered(bitmap, describe(display))
     }
 
     private fun describe(d: WidgetDisplay): String =
@@ -115,12 +105,14 @@ class WidgetRenderer(private val context: Context) {
 private class Frame(
     val p: Painter,
     val st: WidgetStyle,
-    val d: WidgetDisplay,
+    display: WidgetDisplay,
     val W: Float,
     val H: Float,
     val mode: RenderMode,
     val now: Long,
 ) {
+    // Отсчёт показываем, только если до события не больше 90 минут, иначе — время начала.
+    val d: WidgetDisplay = display.withVisibleCountdown()
     val pal = st.palette
     val pad = st.padding
 
@@ -138,7 +130,7 @@ private class Frame(
     val upcoming = d.phase == Phase.BREAK || d.phase == Phase.WINDOW || d.phase == Phase.BEFORE_FIRST
     val nextDay = d.phase == Phase.DAY_OVER || d.phase == Phase.DAY_OFF
 
-    fun draw(): CountdownSlot? = when (st.layout) {
+    fun draw() = when (st.layout) {
         CardLayout.GLASS -> glass()
         CardLayout.CLEAN -> clean()
         CardLayout.RING -> ring()
@@ -163,38 +155,32 @@ private class Frame(
 
     fun countdownPrefix() = if (isLesson) "ещё" else "через"
 
-    /** Пример текста отсчёта максимальной ширины — чтобы зарезервировать место. */
-    fun countdownSample(): String {
-        val left = (d.countdownTo ?: now) - now
-        return if (left >= 3_600_000L) "0:00:00" else "00:00"
+    /** Минуты до конца пары или до начала следующей: «34 мин», без [unit] — просто «34». */
+    fun countdownText(unit: Boolean = true): String {
+        val m = d.minutesLeft ?: 0
+        return if (unit) "$m мин" else "$m"
     }
 
-    fun countdownText(): String {
-        val total = (((d.countdownTo ?: now) - now).coerceAtLeast(0L) / 1000L)
-        val hh = total / 3600
-        val mm = total % 3600 / 60
-        val ss = total % 60
-        return if (hh > 0) "%d:%02d:%02d".format(hh, mm, ss) else "%02d:%02d".format(mm, ss)
-    }
+    /** Текст отсчёта для расчёта места под него. */
+    fun countdownSample(unit: Boolean = true): String = countdownText(unit)
 
     /**
-     * Обратный отсчёт. На виджете возвращает место для системного Chronometer,
-     * в превью рисует то же самое статично.
+     * Обратный отсчёт в минутах — рисуется в картинке шрифтом стиля
+     * (системный Chronometer лаунчеры показывают только системным шрифтом).
      */
-    fun countdown(x: Float, y: Float, w: Float, h: Float, layout: CountdownLayout, format: String, color: Int, size: Float): CountdownSlot? {
-        if (d.countdownTo == null) return null
-        if (mode == RenderMode.PREVIEW) {
-            val t = layout.typo(size)
-            val text = format.replace("%s", countdownText())
-            val ty = y + (h - p.lineHeight(t)) / 2f
-            when (layout.align) {
-                Align.START -> p.text(text, x, ty, t, color)
-                Align.END -> p.text(text, x + w, ty, t, color, Align.END)
-                Align.CENTER -> p.text(text, x + w / 2f, ty, t, color, Align.CENTER)
-            }
-            return null
+    fun countdown(
+        x: Float, y: Float, w: Float, h: Float,
+        layout: CountdownLayout, format: String, color: Int, size: Float, unit: Boolean = true,
+    ) {
+        if (d.countdownTo == null) return
+        val t = layout.typo(size)
+        val text = format.replace("%s", countdownText(unit))
+        val ty = y + (h - p.lineHeight(t)) / 2f
+        when (layout.align) {
+            Align.START -> p.text(text, x, ty, t, color)
+            Align.END -> p.text(text, x + w, ty, t, color, Align.END)
+            Align.CENTER -> p.text(text, x + w / 2f, ty, t, color, Align.CENTER)
         }
-        return CountdownSlot(x, y, w, h, layout, format, color, size)
     }
 
     /** Левая и правая части строки «Далее». В пустых состояниях — группа и неделя. */
@@ -273,7 +259,7 @@ private class Frame(
 
     // ---------- 1. Стекло ----------
 
-    fun glass(): CountdownSlot? {
+    fun glass() {
         val path = roundPath(0f, 0f, W, H, st.radius)
         // На рабочем столе под стеклом — лёгкое затемнение, иначе белый текст пропадает на светлых обоях.
         if (mode == RenderMode.WIDGET) {
@@ -316,7 +302,7 @@ private class Frame(
         val cdFormat = if (narrow) "%s" else "${countdownPrefix()} %s"
         val rightText: String? = when {
             d.countdownTo != null -> cdFormat.replace("%s", countdownSample())
-            nextDay && f != null -> "в ${fmt(f.startMinute)}"
+            !isLesson && f != null -> "в ${fmt(f.startMinute)}"
             else -> null
         }
         val rightW = rightText?.let { p.width(it, metaT) + 4f } ?: 0f
@@ -330,9 +316,8 @@ private class Frame(
         p.roundRectStroke(l, y, l + pw, y + pillH, pillH / 2f, 0x40FFFFFF)
         p.text(pillText, l + 9f, y + 3f, labelT, pal.text)
 
-        var slot: CountdownSlot? = null
         if (d.countdownTo != null) {
-            slot = countdown(r - rightW, y, rightW, pillH, CountdownLayout.MANROPE_END, cdFormat, cdColor, metaT.size)
+            countdown(r - rightW, y, rightW, pillH, CountdownLayout.MANROPE_END, cdFormat, cdColor, metaT.size)
         } else if (rightText != null) {
             p.text(rightText, r, y + (pillH - p.lineHeight(metaT)) / 2f, metaT, cdColor, Align.END)
         }
@@ -381,12 +366,11 @@ private class Frame(
         }
         if (large) dayList(mainH + 2f, H - pad.bottom)
         p.textShadowColor = 0
-        return slot
     }
 
     // ---------- 2. Минимализм ----------
 
-    fun clean(): CountdownSlot? {
+    fun clean() {
         card(pal.surface, pal.border)
         var y = top
         val labelT = st.label
@@ -438,7 +422,6 @@ private class Frame(
             }
             by -= 8f
         }
-        var slot: CountdownSlot? = null
         if (hasRow) {
             by -= rowH
             if (d.countdownTo != null || d.progress != null) {
@@ -447,18 +430,17 @@ private class Frame(
                 val ly = by + rowH / 2f - 1f
                 p.rect(l, ly, lineR, ly + 2f, pal.track)
                 p.rect(l, ly, l + (lineR - l) * (d.progress ?: 0f), ly + 2f, pal.accent)
-                slot = countdown(r - cdW, by, cdW, rowH, CountdownLayout.INTER_TIGHT_END, "%s", pal.text, metaT.size)
+                countdown(r - cdW, by, cdW, rowH, CountdownLayout.INTER_TIGHT_END, "%s", pal.text, metaT.size)
             } else {
                 p.text(d.message ?: "", l, by, metaT, pal.muted, maxWidth = r - l)
             }
         }
         if (large) dayList(mainH + 2f, H - pad.bottom)
-        return slot
     }
 
     // ---------- 3. Тёмный OLED ----------
 
-    fun ring(): CountdownSlot? {
+    fun ring() {
         card(pal.surface, pal.border)
         val ringD = if (narrow) 52f else if (mainH < 140f) 60f else 76f
         val ringW = if (ringD > 70f) 5f else 4.5f
@@ -476,14 +458,14 @@ private class Frame(
             p.canvas.drawArc(RectF(cx - rr, cy - rr, cx + rr, cy + rr), -90f, 360f * prog, false, p.stroke)
         }
 
-        val small = Typo(AppFont.INTER_TIGHT, 9f, 500, lineHeight = 1.2f)
-        var slot: CountdownSlot? = null
+        val small = Typo(AppFont.INTER_TIGHT, if (ringD > 70f) 10f else 9f, 500, lineHeight = 1.2f)
         if (d.countdownTo != null) {
-            val size = if (countdownSample().length > 5) (if (ringD > 70f) 12f else 9.5f) else if (ringD > 70f) 16f else 12.5f
+            // Как в макете: крупное число минут, под ним «мин».
+            val size = if (ringD > 70f) 26f else 18f
             val boxW = ringD - 2 * ringW - 6f
-            val boxH = size * 1.2f
-            slot = countdown(cx - boxW / 2f, cy - boxH / 2f - 4f, boxW, boxH, CountdownLayout.INTER_TIGHT_CENTER, "%s", pal.text, size)
-            p.text(if (isLesson) "осталось" else "до пары", cx, cy + boxH / 2f - 3f, small, pal.muted, Align.CENTER)
+            val boxH = size * 1.05f
+            countdown(cx - boxW / 2f, cy - boxH / 2f - 5f, boxW, boxH, CountdownLayout.INTER_TIGHT_CENTER, "%s", pal.text, size, unit = false)
+            p.text("мин", cx, cy + boxH / 2f - 3f, small, pal.muted, Align.CENTER)
         } else if (f != null) {
             val t = Typo(AppFont.INTER_TIGHT, if (ringD > 70f) 18f else 15f, 600, tracking = -0.03f, lineHeight = 1.1f, tabular = true)
             p.text(fmt(f.startMinute), cx, cy - p.lineHeight(t) / 2f - 4f, t, pal.text, Align.CENTER)
@@ -538,12 +520,11 @@ private class Frame(
             }
         }
         if (large) dayList(mainH + 2f, H - pad.bottom)
-        return slot
     }
 
     // ---------- 4. Терминал ----------
 
-    fun terminal(): CountdownSlot? {
+    fun terminal() {
         card(pal.surface, pal.border)
         val mono = st.label
         val big = st.heading
@@ -614,12 +595,11 @@ private class Frame(
             p.text(cursor, l + w, lastTop, mono, pal.secondary)
         }
         if (large) dayList(mainH + 2f, H - pad.bottom)
-        return null
     }
 
     // ---------- 5. Material You ----------
 
-    fun tonal(): CountdownSlot? {
+    fun tonal() {
         card(pal.surface, pal.border)
         val gap = 7f
         val pillH = 34f
@@ -673,7 +653,6 @@ private class Frame(
         p.text(sub, colX, cy, st.body, pal.secondary, maxWidth = colW)
 
         // Прогресс и отсчёт
-        var slot: CountdownSlot? = null
         val rowTop = ib - rowH
         if (rowTop > cy + subLh) {
             val cdT = st.body.weighted(600)
@@ -684,7 +663,7 @@ private class Frame(
                 p.roundRect(il, by, barR, by + 8f, 4f, pal.track)
                 val fw = (barR - il) * (d.progress ?: 0f)
                 if (fw > 0.5f) p.roundRect(il, by, il + max(fw, 8f), by + 8f, 4f, pal.accent)
-                slot = countdown(ir - cdW, rowTop, cdW, rowH, CountdownLayout.ROBOTO_FLEX_END, "%s", pal.secondary, cdT.size)
+                countdown(ir - cdW, rowTop, cdW, rowH, CountdownLayout.ROBOTO_FLEX_END, "%s", pal.secondary, cdT.size)
             }
         }
 
@@ -701,7 +680,6 @@ private class Frame(
             }
         }
         if (large) dayList(mainH + 4f, H - pad.bottom - 6f, left = innerL + 14f, right = innerR - 14f)
-        return slot
     }
 
     fun iconFor(): Icon = when {
@@ -730,7 +708,7 @@ private class Frame(
 
     // ---------- 6. Тетрадь ----------
 
-    fun paper(): CountdownSlot? {
+    fun paper() {
         p.canvas.withSave {
             p.clipRound(0f, 0f, W, H, st.radius)
             p.rect(0f, 0f, W, H, pal.surface)
@@ -792,12 +770,11 @@ private class Frame(
             }
         }
         if (large) dayList(mainH + 2f, H - pad.bottom, left = left)
-        return null
     }
 
     // ---------- 7. Nothing ----------
 
-    fun dots(): CountdownSlot? {
+    fun dots() {
         card(pal.surface, pal.border)
         var y = top
         val labelT = st.label
@@ -811,17 +788,16 @@ private class Frame(
 
         // Крупные точечные цифры: отсчёт, время начала или прочерк.
         val big = d.countdownTo != null
-        val sample = if (big) countdownSample() else f?.let { fmt(it.startMinute) } ?: "--"
+        val sample = if (big) countdownSample(unit = false) else f?.let { fmt(it.startMinute) } ?: "--"
         val maxNumW = (r - l) * (if (narrow) 1f else 0.5f)
-        var size = if (narrow) 34f else 44f
+        var size = if (narrow) 44f else 64f
         val numT = Typo(AppFont.DOTO, size, 900, tracking = -0.03f, lineHeight = 1f, tabular = true)
         val wAt = p.width(sample, numT)
         if (wAt > maxNumW) size *= maxNumW / wAt
-        val heroH = size * 1.0f
+        val heroH = size * 0.85f
         val numW = p.width(sample, numT.sized(size)) + 4f
-        var slot: CountdownSlot? = null
         if (big) {
-            slot = countdown(l, y, numW, heroH, CountdownLayout.DOTO_START, "%s", pal.text, size)
+            countdown(l, y, numW, heroH, CountdownLayout.DOTO_START, "%s", pal.text, size, unit = false)
         } else {
             p.text(sample, l, y, numT.sized(size), pal.text)
         }
@@ -837,7 +813,7 @@ private class Frame(
         cy += fitted.height + 3f
         val sub = when {
             f == null -> d.message ?: ""
-            else -> listOfNotNull(f.typeShort, f.room).joinToString(" · ")
+            else -> listOfNotNull("мин".takeIf { big }, f.typeShort, f.room).joinToString(" · ")
         }
         p.text(sub, colX, cy, subT, pal.muted, maxWidth = colW)
         val contentBottom = if (narrow) cy + subLh else y + heroH
@@ -877,7 +853,6 @@ private class Frame(
             }
         }
         if (large) dayList(mainH + 2f, H - pad.bottom)
-        return slot
     }
 
     // ---------- 8. Win95 ----------
@@ -913,7 +888,7 @@ private class Frame(
         return w
     }
 
-    fun retro(): CountdownSlot? {
+    fun retro() {
         p.rect(0f, 0f, W, H, pal.surface)
         bevel(0f, 0f, W, H, raised = true)
         val small = st.body
@@ -1031,7 +1006,6 @@ private class Frame(
             else -> nextParts().first
         }
         p.text(statusText, bl + 4f, statusT + (statusH - p.lineHeight(small)) / 2f, small, pal.text, maxWidth = br - bl - 8f)
-        return null
     }
 
     /** Пиксельная иконка: прямоугольники в сетке 16×16 (как в макете). */
@@ -1044,20 +1018,19 @@ private class Frame(
 
     // ---------- 9. НЭТИ ----------
 
-    fun tags(): CountdownSlot? {
+    fun tags() {
         card(pal.surface, pal.border)
         var y = top
         val badgeT = st.label
         val badgeH = p.lineHeight(badgeT) + 6f
         val cdT = CountdownLayout.MONTSERRAT_END.typo(
-            if (narrow) 13f else if (countdownSample().length > 5) 18f else 22f,
+            if (narrow) 13f else 30f,
         )
         val rightText: String? = when {
-            d.countdownTo != null -> countdownSample()
-            nextDay && f != null -> fmt(f.startMinute)
+            d.countdownTo != null -> countdownSample(unit = narrow)
+            !isLesson && f != null -> fmt(f.startMinute)
             else -> null
         }
-        var slot: CountdownSlot? = null
         val badge: String
         val gw: Float
         if (narrow) {
@@ -1066,7 +1039,7 @@ private class Frame(
             val w = rightText?.let { p.width(it, cdT) + 4f } ?: 0f
             if (rightText != null) {
                 if (d.countdownTo != null) {
-                    slot = countdown(r - w, y, w, badgeH, CountdownLayout.MONTSERRAT_END, "%s", pal.text, cdT.size)
+                    countdown(r - w, y, w, badgeH, CountdownLayout.MONTSERRAT_END, "%s", pal.text, cdT.size)
                 } else {
                     p.text(rightText, r, y + (badgeH - p.lineHeight(cdT)) / 2f, cdT, pal.text, Align.END)
                 }
@@ -1084,7 +1057,11 @@ private class Frame(
         y += badgeH + 8f
 
         // Название и минуты справа
-        val rightW = if (narrow) 0f else rightText?.let { p.width(it, cdT) + 4f } ?: 0f
+        // Как в макете: крупное «34» и маленькое «мин» рядом.
+        val minT = Typo(AppFont.MONTSERRAT, 11f, 700)
+        val minW = if (d.countdownTo != null) p.width("мин", minT) + 4f else 0f
+        val numW = rightText?.let { p.width(it, cdT) } ?: 0f
+        val rightW = if (narrow || rightText == null) 0f else numW + minW + 2f
         val tagsH = p.lineHeight(st.body) + 6f
         val metaLh = p.lineHeight(st.meta)
         val bottomBlock = 5f + 9f + 2f + 6f + metaLh
@@ -1096,7 +1073,8 @@ private class Frame(
         if (rightText != null && !narrow) {
             val cy = y + fitted.height - cdT.size * 1.0f
             if (d.countdownTo != null) {
-                slot = countdown(r - rightW, cy, rightW, cdT.size * 1.0f, CountdownLayout.MONTSERRAT_END, "%s", pal.text, cdT.size)
+                countdown(r - minW - numW - 2f, cy, numW + 2f, cdT.size * 1.0f, CountdownLayout.MONTSERRAT_END, "%s", pal.text, cdT.size, unit = false)
+                p.textAtBaseline("мин", r, p.baseline(cy, cdT), minT, pal.text, Align.END)
             } else {
                 p.text(rightText, r, cy, cdT, pal.text, Align.END)
             }
@@ -1142,7 +1120,6 @@ private class Frame(
             }
         }
         if (large) dayList(mainH + 2f, H - pad.bottom)
-        return slot
     }
 }
 

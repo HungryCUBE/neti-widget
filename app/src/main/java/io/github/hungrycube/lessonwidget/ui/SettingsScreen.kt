@@ -156,6 +156,17 @@ fun SettingsScreen(onBack: () -> Unit, onChangeGroup: () -> Unit) {
                 )
             }
             Section("Обновления") { UpdateSection() }
+            Section("Автор и отзывы") {
+                Text("Сделано Тёмой — @jackkidney", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Если виджет где-то ошибается, чего-то не хватает или есть идея для нового стиля — " +
+                        "напишите в Telegram. Буду рад любому отзыву, даже короткому.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Button(onClick = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/jackkidney")))
+                }) { Text("Написать в Telegram") }
+            }
             Section("О приложении") {
                 Text(
                     "Неофициальное приложение. Не связано с НГТУ НЭТИ и не одобрено университетом. " +

@@ -264,3 +264,26 @@ fun shortType(type: String): String = when {
     type.startsWith("лаб") -> "лаб"
     else -> type.take(3)
 }
+
+/** Отсчёт показывается, если до конца пары или начала следующей не больше стольких минут. */
+const val COUNTDOWN_MAX_MINUTES = 90
+
+/** Без отсчёта, если до события дальше [COUNTDOWN_MAX_MINUTES] — тогда виджет показывает время начала. */
+fun WidgetDisplay.withVisibleCountdown(): WidgetDisplay =
+    if (countdownTo != null && (minutesLeft ?: 0) > COUNTDOWN_MAX_MINUTES) copy(countdownTo = null) else this
+
+/**
+ * Когда виджет нужно перерисовать: граница пары, смена числа минут в отсчёте
+ * или момент, когда отсчёт начнёт показываться.
+ */
+fun WidgetDisplay.nextRedrawAt(nowMillis: Long): Long? {
+    val target = countdownTo ?: return boundaryAt
+    val left = target - nowMillis
+    val tick = when {
+        left <= 0 -> target
+        left > COUNTDOWN_MAX_MINUTES * 60_000L -> target - COUNTDOWN_MAX_MINUTES * 60_000L
+        // Число минут округлено вверх и уменьшится, когда останется ровно (minutesLeft - 1) минут.
+        else -> target - ((left - 1) / 60_000L) * 60_000L
+    }
+    return listOfNotNull(boundaryAt, tick).minOrNull()
+}

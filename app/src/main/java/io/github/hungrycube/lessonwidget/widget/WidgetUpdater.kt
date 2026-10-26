@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
+import io.github.hungrycube.lessonwidget.core.display.nextRedrawAt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -19,8 +20,6 @@ import kotlinx.coroutines.flow.StateFlow
  */
 object WidgetUpdater {
 
-    /** Пока идёт пара или перемена, полоса прогресса подвигается раз в 3 минуты. Минуты отсчёта тикают сами. */
-    private const val PROGRESS_TICK_MS = 3 * 60_000L
 
     /** Если ничего не запланировано — проверить через 6 часов. */
     private const val IDLE_MS = 6 * 3600_000L
@@ -61,8 +60,8 @@ object WidgetUpdater {
         var next = now + IDLE_MS
         for (id in ids) {
             val d = Widgets.state(app, id, now).display
-            d.boundaryAt?.let { if (it > now) next = minOf(next, it) }
-            if (d.countdownTo != null) next = minOf(next, now + PROGRESS_TICK_MS)
+            // Граница пары или смена минуты в отсчёте (только пока до события не больше 90 минут).
+            d.nextRedrawAt(now)?.let { if (it > now) next = minOf(next, it) }
         }
         // Небольшой запас, чтобы будильник сработал уже после границы.
         val at = next + 500L

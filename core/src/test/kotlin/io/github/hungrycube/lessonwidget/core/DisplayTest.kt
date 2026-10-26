@@ -4,6 +4,8 @@ import io.github.hungrycube.lessonwidget.core.Samples.nsk
 import io.github.hungrycube.lessonwidget.core.display.DisplayBuilder
 import io.github.hungrycube.lessonwidget.core.display.LineStatus
 import io.github.hungrycube.lessonwidget.core.display.Phase
+import io.github.hungrycube.lessonwidget.core.display.nextRedrawAt
+import io.github.hungrycube.lessonwidget.core.display.withVisibleCountdown
 import io.github.hungrycube.lessonwidget.core.model.GroupSchedule
 import io.github.hungrycube.lessonwidget.core.model.Lesson
 import io.github.hungrycube.lessonwidget.core.model.WeekAnchor
@@ -176,5 +178,27 @@ class DisplayTest {
         } finally {
             TimeZone.setDefault(original)
         }
+    }
+}
+
+class RedrawTest {
+    private val em63 = Samples.em63()
+
+    @Test
+    fun minuteTicksDuringLesson() {
+        // 12:30:20, пара до 13:30 — осталось 59 мин 40 с, на экране «60 мин».
+        val now = Samples.nsk(2026, 10, 26, 12, 30) + 20_000
+        val d = io.github.hungrycube.lessonwidget.core.display.DisplayBuilder.build(em63, "ЭМ-63", null, now)
+        assertEquals(60, d.minutesLeft)
+        assertEquals(Samples.nsk(2026, 10, 26, 12, 31), d.nextRedrawAt(now))
+    }
+
+    @Test
+    fun farCountdownIsHiddenUntil90Minutes() {
+        val now = Samples.nsk(2026, 10, 26, 7, 0)
+        val d = io.github.hungrycube.lessonwidget.core.display.DisplayBuilder.build(em63, "ЭМ-63", null, now)
+        assertNull(d.withVisibleCountdown().countdownTo)
+        // Первая пара в 10:15 — отсчёт появится в 8:45.
+        assertEquals(Samples.nsk(2026, 10, 26, 8, 45), d.nextRedrawAt(now))
     }
 }
