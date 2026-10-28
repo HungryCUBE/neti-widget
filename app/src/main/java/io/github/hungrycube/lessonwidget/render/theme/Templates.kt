@@ -102,7 +102,7 @@ object Templates {
 /** Подставляет значения в шаблоны стиля. [vars] — значение по имени или null, если его нет. */
 class TextRenderer(private val tpls: Map<String, Tpl>, private val vars: (String) -> String?) {
 
-    fun get(key: String, extra: Map<String, String?> = emptyMap()): String? = render(tpls[key] ?: return null, extra, 0)
+    fun get(key: String, extra: Map<String, String?> = emptyMap()): String? = tpls[key]?.let { render(it, extra, 0) }
 
     private fun render(t: Tpl, extra: Map<String, String?>, depth: Int): String? = when (t) {
         is Tpl.Text -> expand(t.text, extra, depth)

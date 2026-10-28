@@ -76,7 +76,7 @@
 - `SIGNING_KEYSTORE_BASE64` — keystore (PKCS12) в base64;
 - `SIGNING_KEYSTORE_PASSWORD` — пароль; алиас ключа — `neti`.
 
-Новый стиль — один объект `WidgetStyle` в [`render/WidgetStyle.kt`](app/src/main/java/io/github/hungrycube/lessonwidget/render/WidgetStyle.kt) с одной из готовых разметок `CardLayout`.
+**Стили.** Новый стиль — один JSON-файл в [`app/src/main/assets/themes/`](app/src/main/assets/themes), без правок кода. Схема, раскладки и как виджет подстраивается под размер — в [docs/STYLES.md](docs/STYLES.md).
 
 ## Лицензии
 

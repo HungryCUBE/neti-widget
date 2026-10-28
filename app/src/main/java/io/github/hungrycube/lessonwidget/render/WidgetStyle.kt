@@ -53,7 +53,7 @@ class WidgetStyle internal constructor(
 class ImportResult(val style: WidgetStyle?, val errors: List<String>, val warnings: List<String>)
 
 /**
- * Все стили: файлы assets/themes/*.json и импортированные (filesDir/themes/*.json).
+ * Все стили: JSON-файлы из assets/themes и импортированные из filesDir/themes.
  * Новый стиль — новый файл, галерея и выбор строятся по ним сами.
  */
 object Styles {

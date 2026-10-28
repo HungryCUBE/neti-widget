@@ -46,6 +46,7 @@ jobs:
 
       - name: Тесты и отладочная сборка
         run: |
+          set -o pipefail
           gradle --no-daemon --stacktrace :core:test :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease \
             -PversionName=${{ steps.ver.outputs.name }} -PversionCode=${{ steps.ver.outputs.code }} \
             2>&1 | tee -a build.log
@@ -76,6 +77,7 @@ jobs:
           SIGNING_KEYSTORE_FILE: ${{ runner.temp }}/release.p12
           SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
         run: |
+          set -o pipefail
           gradle --no-daemon --stacktrace :app:assembleRelease \
             -PversionName=${{ steps.ver.outputs.name }} -PversionCode=${{ steps.ver.outputs.code }} \
             2>&1 | tee -a build.log

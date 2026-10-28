@@ -17,10 +17,11 @@ class ColorSources(
     private val photo: () -> Bitmap? = { null },
 ) {
     private val wallpaperColors by lazy {
-        if (context == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) {
+        val ctx = context
+        if (ctx == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) {
             null
         } else {
-            runCatching { WallpaperManager.getInstance(context).getWallpaperColors(WallpaperManager.FLAG_SYSTEM) }.getOrNull()
+            runCatching { WallpaperManager.getInstance(ctx).getWallpaperColors(WallpaperManager.FLAG_SYSTEM) }.getOrNull()
         }
     }
 
@@ -28,9 +29,10 @@ class ColorSources(
 
     /** Системные цвета Material You: accent1_600, neutral2_50 и т. п. (Android 12+). */
     fun dynamic(name: String): Int? {
-        if (!live || context == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
-        val id = context.resources.getIdentifier("system_$name", "color", "android")
-        return if (id == 0) null else runCatching { context.getColor(id) }.getOrNull()
+        val ctx = context
+        if (!live || ctx == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+        val id = ctx.resources.getIdentifier("system_$name", "color", "android")
+        return if (id == 0) null else runCatching { ctx.getColor(id) }.getOrNull()
     }
 
     /** Цвета обоев: primary, secondary, tertiary (Android 8.1+). */
