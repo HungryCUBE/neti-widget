@@ -51,6 +51,16 @@ jobs:
             -PversionName=${{ steps.ver.outputs.name }} -PversionCode=${{ steps.ver.outputs.code }} \
             2>&1 | tee -a build.log
 
+      - name: Проверка APK
+        if: always()
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          for a in app/build/outputs/apk/*/*.apk; do
+            echo "== $a $(stat -c %s "$a") байт"
+            "$BT/aapt2" dump badging "$a" | head -5 || true
+            "$BT/apksigner" verify --print-certs "$a" | head -5 || true
+          done 2>&1 | tee apk-check.txt
+
       - name: Отладочный APK
         if: ${{ !startsWith(github.ref, 'refs/tags/v') && hashFiles('app/build/outputs/apk/debug/*.apk') != '' }}
         uses: actions/upload-artifact@v4
@@ -116,6 +126,7 @@ jobs:
             echo "status: ${{ job.status }}"
             echo "run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           } > "$R/status.txt"
+          cp apk-check.txt "$R/" 2>/dev/null || true
           if [ -f build.log ]; then
             grep -E '^e: |^w: .*deprecated|error:|FAILED|What went wrong|^> |BUILD |Exception|Error|expected|at io\.github' build.log | head -400 > "$R/errors.txt" || true
             tail -n 300 build.log > "$R/tail.txt"
