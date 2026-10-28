@@ -511,8 +511,10 @@ fun Frame.agenda(top: Float, bottom: Float, left: Float = l, right: Float = r) {
             p.text(fmt(info.endMinute), left + markerW, sy, subT, muted)
             p.text(sv("agendaSub", *vars), textL, sy, subT, muted, maxWidth = right - textL)
         } else {
-            val roomW = info.room?.let { p.width(it, rowT) + 8f } ?: 0f
-            info.room?.let { p.text(it, right, ty, rowT, muted, Align.END, maxWidth = (right - left) / 3f) }
+            // На узком виджете аудитория уступает место названию.
+            val room = info.room?.takeIf { right - textL - min(p.width(it, rowT) + 8f, (right - left) / 3f) >= (right - left) * 0.45f }
+            val roomW = room?.let { p.width(it, rowT) + 8f } ?: 0f
+            room?.let { p.text(it, right, ty, rowT, muted, Align.END, maxWidth = (right - left) / 3f) }
             p.text(sv("agendaRow", *vars), textL, ty, rowT, text, maxWidth = right - textL - min(roomW, (right - left) / 3f))
         }
         y += rowH

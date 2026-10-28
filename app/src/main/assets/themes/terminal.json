@@ -53,5 +53,8 @@
     "nextNone": "next → —",
     "cursor": " ▍"
   },
+  "variants": {
+    "compact": {"flags": {"tagOptional": true}}
+  },
   "backdrop": {"layers": [{"type": "solid", "color": "#121714"}]}
 }

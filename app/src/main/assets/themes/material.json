@@ -51,7 +51,7 @@
     "compact": {
       "metrics": {"iconBox": 28, "iconRadius": 9},
       "typography": {"title": {"size": 16}},
-      "flags": {"chip": false},
+      "flags": {"chip": false, "hidePillRoom": true},
       "strings": {"sub": ["{room}", "{until}"], "subNextDay": ["{room}", "{until}"]}
     }
   },

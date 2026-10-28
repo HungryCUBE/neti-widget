@@ -33,10 +33,12 @@ internal fun Frame.terminal() {
 
     // ▸ Матанализ [пр]
     val tagRole = role("tag", "title")
-    val tag = s("titleTag") ?: ""
+    var tag = s("titleTag") ?: ""
     val titleText = if (f == null) sv("titleNone") else d.title
     val prefix = sv("titlePrefix")
     val prefixW = p.width(prefix, big)
+    // Флаг tagOptional: если название не влезает целиком, сначала убирается тип пары.
+    if (flag("tagOptional") && tag.isNotEmpty() && prefixW + p.width(titleText, big) + p.width(tag, tagRole.typo) > r - l) tag = ""
     val tagW = if (tag.isNotEmpty()) p.width(tag, tagRole.typo) else 0f
     var x = l
     x += p.text(prefix, x, y, big, title.color)

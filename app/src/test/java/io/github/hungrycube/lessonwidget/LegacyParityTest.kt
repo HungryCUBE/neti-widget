@@ -31,8 +31,8 @@ import io.github.hungrycube.lessonwidget.legacy.WidgetRenderer as LegacyRenderer
 
 /**
  * Стили из JSON рисуют стандартный виджет пиксель в пиксель как прежний код (копия в пакете legacy).
- * Проверяются все стили во всех состояниях на размерах, где масштаб движка равен 1:
- * 4×2 (316×168), низкий 4×2, узкий 3×2 и 2×2 — в превью и на рабочем столе.
+ * Проверяются все стили во всех состояниях на размерах обычной формы, где масштаб движка равен 1:
+ * 4×2 (316×168), низкий, узкий и чуть выше обычного — в превью и на рабочем столе.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -81,7 +81,8 @@ class LegacyParityTest {
     fun jsonStylesMatchOldRenderer() {
         val legacy = LegacyRenderer(context)
         val renderer = WidgetRenderer(context)
-        val sizes = listOf(316f to 168f, 316f to 120f, 260f to 168f, 150f to 150f, 180f to 130f)
+        // Только обычная форма 4×2: на 2×2 поведение намеренно улучшено (сначала убираются детали, а не название).
+        val sizes = listOf(316f to 168f, 316f to 120f, 260f to 168f, 300f to 200f)
         val failures = ArrayList<String>()
         var compared = 0
         for (old in LegacyStyles.all) {

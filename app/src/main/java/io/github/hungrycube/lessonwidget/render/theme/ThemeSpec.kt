@@ -291,7 +291,7 @@ data class AgendaSpec(
     /** Насколько можно растянуть строки, чтобы список занял всё место. */
     val maxGrow: Float = 1.5f,
     /** Какая доля растяжения уходит в размер шрифта. */
-    val fontGrow: Float = 0.4f,
+    val fontGrow: Float = 0.25f,
 )
 
 @Serializable
@@ -307,6 +307,12 @@ data class AdaptSpec(
     val compactHeight: Float = 150f,
     /** Ниже — форма short (детали убираются). */
     val shortBelow: Float = 140f,
+    /**
+     * Насколько карточка может быть выше baseHeight, пока под ней нет списка пар (4×3). Если выше —
+     * рисунок увеличивается сильнее, сужаясь по ширине до tallMinWidth, чтобы в середине не было пустоты.
+     */
+    val stretch: Float = 1.2f,
+    val tallMinWidth: Float = 250f,
     /** Выше — форма large: карточка высотой mainHeight и список пар под ней. */
     val largeFrom: Float = 250f,
     val mainHeight: Float = 168f,

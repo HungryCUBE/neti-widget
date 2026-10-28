@@ -47,12 +47,20 @@ object Adaptive {
         val canLarge = "large" in sizes
         val s = if (w >= a.compactBelow || !canCompact) {
             val up = min(w / a.minWidth, h / a.baseHeight)
-            when {
+            var k = when {
                 up > 1f -> min(up, a.maxScale)
                 // Стиль без компактного вида: ужимаем обычный, чтобы он поместился по ширине.
                 w < a.compactBelow -> max(w / a.compactBelow, a.minScale)
                 else -> 1f
             }
+            // Карточка заметно выше обычной, но для списка пар ещё мала (4×3): увеличиваем сильнее,
+            // чтобы не было пустой полосы посередине.
+            val vh = h / k
+            if (!(canLarge && vh >= a.largeFrom) && vh > a.baseHeight * a.stretch) {
+                val tall = min(w / a.tallMinWidth, h / (a.baseHeight * a.stretch))
+                if (tall > k) k = min(tall, a.maxScale)
+            }
+            k
         } else {
             val up = min(w / a.compactWidth, h / a.compactHeight)
             when {

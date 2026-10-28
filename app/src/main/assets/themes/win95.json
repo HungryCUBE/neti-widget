@@ -68,7 +68,7 @@
     "statusNextList": ["{next}", "{nextStart}", "{nextRoom}"]
   },
   "variants": {
-    "compact": {"metrics": {"iconSize": 24}}
+    "compact": {"metrics": {"iconSize": 24}, "flags": {"typeOptional": true}}
   },
   "backdrop": {"layers": [{"type": "solid", "color": "#008080"}]}
 }

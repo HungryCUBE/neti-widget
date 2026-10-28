@@ -126,6 +126,9 @@ class ThemeFilesTest {
         // Растянутый 4×4 — крупнее и со списком пар.
         val tall = Adaptive.classify(350f, 390f, a, all)
         assertTrue(tall.large && tall.scale > 1.1f && tall.width >= a.minWidth - 0.01f)
+        // 4×3: списку пар ещё мало места — карточка крупнее, без пустой полосы посередине.
+        val mid = Adaptive.classify(330f, 260f, a, all)
+        assertTrue(!mid.large && mid.scale > 1.2f && mid.height <= a.baseHeight * a.stretch + 0.5f)
         // Очень маленький — ужат, но не сильнее minScale.
         val tiny = Adaptive.classify(110f, 110f, a, all)
         assertTrue(tiny.compact && tiny.scale >= a.minScale && tiny.scale < 1f)

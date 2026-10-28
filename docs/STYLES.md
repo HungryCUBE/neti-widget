@@ -236,6 +236,7 @@
 | `minScale` | 0.85 | максимальное уменьшение на совсем маленьких виджетах |
 | `widgetInset` | 0 | прозрачный отступ на рабочем столе (Win95 — 8, чтобы Android 12+ не срезал углы окна) |
 | `compactBelow`, `shortBelow`, `largeFrom` | 230, 140, 250 | границы форм в виртуальных dp |
+| `stretch`, `tallMinWidth` | 1.2, 250 | если карточка выше обычной больше чем в `stretch` раз, а для списка пар места ещё мало (4×3), рисунок увеличивается сильнее, сужаясь до `tallMinWidth` |
 
 `variants` — что поменять в стиле на конкретной форме: `short` (низкий), `compact` (2×2),
 `large` (4×4). Внутри — любые поля этого же файла:
@@ -253,11 +254,11 @@
 | `glass` | Стекло | `pill`, `pillBorder` | — | `pillPadX` 9, `pillPadY` 3, `pillGap` 8, `headerGap` 8, `progressGap` 9 | `counterFormat`, `atStart`, `details*` |
 | `clean` | Минимализм | `number`, `nextTitle` | — | — | `header*`, `numberBadge`, `nextPrefix`, `nextSuffix` |
 | `ring` | Тёмный OLED | `divider`, `nextDot` | `unit`, `time`, `placeholder`, `nextTime` | `ringDiameter` 76, `ringGap` 14 | `stack`; `status`, `statusCompact`, `subCompact`, `ringTime`, `ringDay`, `ringEmpty`, `nextName` |
-| `terminal` | Терминал | `cursor` | `tag` | — | `prompt`, `cmd*`, `titlePrefix`, `titleTag`, `titleNone`, `upcomingNote`, `nextDayNote`, `nextLine`, `nextNoData`, `nextNone`, `cursor` |
-| `tonal` | Material You | `container`, `iconBg`, `chip`, `pill` | `chip`, `nextAside`, `nextNone` | `gap` 7, `pillHeight` 34, `containerRadius` 24, `innerPadX` 14, `innerPadTop` 12, `innerPadBottom` 13, `iconBox` 36, `iconRadius` 12, `chipPadX` 10, `chipPadY` 4, `chipMax` 0.38, `pillPadX` 14 | `chip`; `sub`, `subNextDay`, `pillText` |
+| `terminal` | Терминал | `cursor` | `tag` | — | `tagOptional` (2×2: тип пары убирается раньше названия); `prompt`, `cmd*`, `titlePrefix`, `titleTag`, `titleNone`, `upcomingNote`, `nextDayNote`, `nextLine`, `nextNoData`, `nextNone`, `cursor` |
+| `tonal` | Material You | `container`, `iconBg`, `chip`, `pill` | `chip`, `nextAside`, `nextNone` | `gap` 7, `pillHeight` 34, `containerRadius` 24, `innerPadX` 14, `innerPadTop` 12, `innerPadBottom` 13, `iconBox` 36, `iconRadius` 12, `chipPadX` 10, `chipPadY` 4, `chipMax` 0.38, `pillPadX` 14 | `chip`, `hidePillRoom`; `sub`, `subNextDay`, `pillText` |
 | `paper` | Тетрадь | `number` | `nextTitle` | `textLeft` 40 | `header*`, `numberBadge`, `nextPrefix` |
 | `dots` | Nothing | `statusDot` | `hero`, `nextLabel` | `statusDot` 3.5, `heroWidth` 0.5, `progressGap` 10 | `stack`, `nextShort`; `headerRight`, `heroNone`, `sub`, `nextLabel`, `nextTime`, `nextTitle` |
-| `retro` | Win95 | `bevelLight`, `bevelShadow`, `bevelOuterLight`, `bevelOuterDark`, `titleBarStart`, `titleBarEnd`, `titleText` | — | `iconSize` 32, `menuMinWidth` 160 | `windowTitle`, `menu`, `button*`, `titleType`, `row*`, `statusNext`; иконки слотов `window`, `document` |
+| `retro` | Win95 | `bevelLight`, `bevelShadow`, `bevelOuterLight`, `bevelOuterDark`, `titleBarStart`, `titleBarEnd`, `titleText` | — | `iconSize` 32, `menuMinWidth` 160 | `typeOptional`; `windowTitle`, `menu`, `button*`, `titleType`, `row*`, `statusNext`; иконки слотов `window`, `document` |
 | `tags` | НЭТИ | `badge`, `tag1`–`tag3`, `rule` | `group`, `unit` | — | `badgeCounter`; `badge`, `atTime`, `tag*` |
 
 Полные примеры — сами файлы в `assets/themes/`.
@@ -295,6 +296,8 @@ glass.json (вариант compact): typography: нет роли «header»
    (должна влезать карточка). На стандартном 4×2 масштаб ровно 1 — виджет такой же, как был.
 2. **Форма** по размеру, уже без масштаба: `compact` (узкий, 2×2), `short` (низкий — второстепенные
    строки убираются раньше названия), `large` (высокий — под карточкой список пар дня).
+   Промежуточный 4×3, где для списка ещё мало места, не растягивается пустой полосой: рисунок
+   увеличивается сильнее, пока карточка не станет обычной пропорции.
 3. **Лишнее место** на высоком виджете забирает список пар: если хватает — строки в две строчки
    (время окончания, тип, аудитория), дальше строки растягиваются и шрифт растёт. Если места мало —
    сначала пропадают прошедшие пары, потом последние («и ещё 2 пары»).
@@ -353,4 +356,5 @@ glass.json (вариант compact): typography: нет роли «header»
 
 Проверка «выглядит точно как раньше»: тест `LegacyParityTest` рисует каждый стиль во всех состояниях
 старым кодом (копия в `app/src/test/.../legacy`) и новым и сравнивает картинки попиксельно —
-на 4×2 и других размерах, где масштаб движка равен 1.
+на 4×2 и других размерах обычной формы, где масштаб движка равен 1. На 2×2 поведение намеренно
+улучшено: в «Терминале», Win95 и Material You сначала пропадает тип пары или аудитория, а не название.

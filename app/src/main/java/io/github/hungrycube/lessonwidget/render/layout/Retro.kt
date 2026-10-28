@@ -72,7 +72,9 @@ internal fun Frame.retro() {
     iconFor("document")?.let { icon(it, bl, y, iconSize) }
     val cx = bl + iconSize + 10f
     val titleT: Typo = role("title").typo
-    val typeText = s("titleType") ?: ""
+    var typeText = s("titleType") ?: ""
+    // Флаг typeOptional: если название не влезает целиком, сначала убирается тип пары.
+    if (flag("typeOptional") && typeText.isNotEmpty() && p.width(d.title, titleT) + p.width(typeText, small) > br - cx) typeText = ""
     val typeW = if (typeText.isNotEmpty()) p.width(typeText, small) else 0f
     val tw = p.text(d.title, cx, y, titleT, text, maxWidth = br - cx - min(typeW, (br - cx) * 0.4f))
     if (typeText.isNotEmpty()) {

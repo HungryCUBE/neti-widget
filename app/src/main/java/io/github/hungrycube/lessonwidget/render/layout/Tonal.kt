@@ -100,7 +100,8 @@ internal fun Frame.tonal() {
         val ty = pt + (pillH - p.lineHeight(next.typo)) / 2f
         if (n != null) {
             val aside = role("nextAside")
-            val rw = n.room?.let { p.text(it, innerR - pillPad, ty, aside.typo, aside.color, Align.END) + 10f } ?: 0f
+            val room = n.room?.takeIf { !flag("hidePillRoom") }
+            val rw = room?.let { p.text(it, innerR - pillPad, ty, aside.typo, aside.color, Align.END) + 10f } ?: 0f
             p.text(sv("pillText"), innerL + pillPad, ty, next.typo, next.color, maxWidth = innerR - innerL - pillPad * 2f - rw)
         } else {
             val none = role("nextNone")
