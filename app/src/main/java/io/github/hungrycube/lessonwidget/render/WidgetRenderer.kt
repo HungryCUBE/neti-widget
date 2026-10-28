@@ -38,6 +38,10 @@ class Rendered(val bitmap: Bitmap, val description: String)
 /** Рисует виджет целиком в Bitmap. Один код и для рабочего стола, и для превью. */
 class WidgetRenderer(private val context: Context) {
 
+    companion object {
+        const val MAX_PIXELS = 1_500_000f
+    }
+
     fun render(
         style: WidgetStyle,
         display: WidgetDisplay,
@@ -48,6 +52,8 @@ class WidgetRenderer(private val context: Context) {
         density: Float = context.resources.displayMetrics.density,
         /** Цвета из обоев для Material You; false — палитра из макета. */
         dynamicColor: Boolean = true,
+        /** Предел размера картинки в пикселях: у виджетов есть лимит на память под картинки. */
+        maxPixels: Float = MAX_PIXELS,
     ): Rendered {
         val st = if (dynamicColor) style.resolved(context) else style
         val w = widthDp.coerceAtLeast(80f)
@@ -58,7 +64,6 @@ class WidgetRenderer(private val context: Context) {
 
         // Плотность пикселей ограничена: у виджетов есть лимит на размер картинок.
         var scale = min(density, 3f)
-        val maxPixels = 1_500_000f
         if (totalW * totalH * scale * scale > maxPixels) scale = sqrt(maxPixels / (totalW * totalH))
 
         val bitmap = Bitmap.createBitmap(

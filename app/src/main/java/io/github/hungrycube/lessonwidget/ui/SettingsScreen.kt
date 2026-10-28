@@ -155,6 +155,7 @@ fun SettingsScreen(onBack: () -> Unit, onChangeGroup: () -> Unit) {
                     },
                 )
             }
+            Section("Виджет отстаёт?") { WidgetLagSection() }
             Section("Обновления") { UpdateSection() }
             Section("Автор и отзывы") {
                 Text("Сделано Тёмой — @jackkidney", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
@@ -185,6 +186,7 @@ fun SettingsScreen(onBack: () -> Unit, onChangeGroup: () -> Unit) {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/${BuildConfig.GITHUB_REPO}")))
                 }) { Text("Проект на GitHub") }
             }
+            Section("Отчёт об ошибке") { CrashReportSection() }
             Spacer(Modifier.padding(8.dp))
         }
     }

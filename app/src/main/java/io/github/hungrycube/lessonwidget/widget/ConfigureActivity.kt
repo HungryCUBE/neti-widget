@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import io.github.hungrycube.lessonwidget.data.CrashLog
 import io.github.hungrycube.lessonwidget.data.ScheduleRepository
 import io.github.hungrycube.lessonwidget.data.Settings
 import io.github.hungrycube.lessonwidget.data.WidgetConfig
@@ -80,17 +81,22 @@ class ConfigureActivity : ComponentActivity() {
         val id = appWidgetId
         val group = config.group ?: settings.defaultGroup
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            val repo = ScheduleRepository(app)
-            WidgetUpdater.update(app, id)
-            if (group != null && repo.load(group) == null) {
-                try {
-                    repo.refresh(group)
-                } catch (e: Exception) {
-                    RefreshScheduler.refreshNow(app)
+            try {
+                val repo = ScheduleRepository(app)
+                WidgetUpdater.update(app, id)
+                if (group != null && repo.load(group) == null) {
+                    try {
+                        repo.refresh(group)
+                    } catch (e: Exception) {
+                        RefreshScheduler.refreshNow(app)
+                    }
                 }
+                repo.deleteUnused(Widgets.groupsInUse(app))
+                WidgetUpdater.update(app, id)
+            } catch (e: Exception) {
+                // Без этого ошибка в фоне уронила бы всё приложение.
+                CrashLog.record(app, "Настройка виджета $id", e)
             }
-            repo.deleteUnused(Widgets.groupsInUse(app))
-            WidgetUpdater.update(app, id)
         }
         finish()
     }

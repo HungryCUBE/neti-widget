@@ -51,7 +51,7 @@ class ScheduleRepository(context: Context) {
         }.getOrNull()
     }
 
-    private fun save(schedule: GroupSchedule) {
+    internal fun save(schedule: GroupSchedule) {
         dir.mkdirs()
         AtomicFile(fileFor(schedule.group))
             .writeAtomically(json.encodeToString(GroupSchedule.serializer(), schedule).toByteArray(Charsets.UTF_8))

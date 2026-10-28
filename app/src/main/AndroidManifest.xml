@@ -6,13 +6,15 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!--
         Точные будильники нужны, чтобы виджет переключался ровно на границе пары.
-        Будильники «не будящие» (RTC): пока экран выключен, телефон не просыпается,
-        обновление случится при включении экрана.
+        Границы пар и шаг прогресса — «будящие», смена минуты в отсчёте — «не будящая»:
+        пока экран выключен, её никто не видит, а при включении экрана она срабатывает сразу.
     -->
     <uses-permission
         android:name="android.permission.SCHEDULE_EXACT_ALARM"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- Кнопка «Снять ограничения батареи» в настройках: только по нажатию пользователя. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".App"
