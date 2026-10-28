@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "material",
+  "name": "Material You",
+  "order": 50,
+  "layout": "tonal",
+  "palette": {
+    "surface": "@dynamic.neutral1_10 | #FDF8FF",
+    "text": "@dynamic.neutral1_900 | #1D1B20",
+    "secondary": "@dynamic.accent1_700 | #4F378B",
+    "muted": "@dynamic.neutral2_700 | #49454F",
+    "accent": "@dynamic.accent1_600 | #6750A4",
+    "track": "@dynamic.accent1_200 | #CFBCFF",
+    "container": "@dynamic.accent1_100 | #E9DDFF",
+    "onContainer": "@dynamic.accent1_900 | #21005D",
+    "pill": "@dynamic.neutral2_50 | #F1EBF7",
+    "iconBg": "@accent",
+    "chip": "#FFFFFF"
+  },
+  "background": {
+    "radius": 32,
+    "layers": [{"type": "solid", "color": "@surface"}]
+  },
+  "spacing": {"top": 9, "side": 9, "bottom": 9},
+  "typography": {
+    "defaults": {"font": "roboto_flex"},
+    "header": {"size": 11, "weight": 600, "color": "@secondary"},
+    "chip": {"base": "header", "color": "@secondary"},
+    "title": {"size": 20, "weight": 700, "letterSpacing": -0.01, "lineHeight": 1.15, "color": "@onContainer"},
+    "details": {"size": 12, "weight": 500, "color": "@secondary"},
+    "next": {"size": 13, "weight": 600, "color": "@text"},
+    "nextAside": {"base": "next", "weight": 400, "color": "@muted"},
+    "nextNone": {"base": "next", "weight": 500, "color": "@muted"},
+    "counter": {"size": 12, "weight": 600, "lineHeight": 1, "tabular": true, "align": "end", "color": "@secondary"}
+  },
+  "metrics": {
+    "gap": 7, "pillHeight": 34, "containerRadius": 24,
+    "innerPadX": 14, "innerPadTop": 12, "innerPadBottom": 13,
+    "iconBox": 36, "iconRadius": 12,
+    "chipPadX": 10, "chipPadY": 4, "chipMax": 0.38, "pillPadX": 14
+  },
+  "flags": {"chip": true},
+  "progress": {"type": "thick", "height": 8, "radius": 4, "minFill": 8, "track": "@track", "fill": "@accent"},
+  "icons": {"color": "#FFFFFF"},
+  "strings": {
+    "sub": [{"first": ["{type|cap}", "{status}"]}, "{until}"],
+    "subNextDay": ["{type|cap}", "{dayLabel} в {start}"],
+    "pillText": "{nextStart} · {next}"
+  },
+  "variants": {
+    "compact": {
+      "metrics": {"iconBox": 28, "iconRadius": 9},
+      "typography": {"title": {"size": 16}},
+      "flags": {"chip": false},
+      "strings": {"sub": ["{room}", "{until}"], "subNextDay": ["{room}", "{until}"]}
+    }
+  },
+  "backdrop": {
+    "layers": [
+      {"type": "solid", "color": "#E7E0F2"},
+      {"type": "mesh", "points": [
+        {"x": 0.15, "y": 0.85, "radius": 0.45, "color": "#C9B8F0"},
+        {"x": 0.90, "y": 0.10, "radius": 0.40, "color": "#F3C9DD"}
+      ]}
+    ]
+  }
+}

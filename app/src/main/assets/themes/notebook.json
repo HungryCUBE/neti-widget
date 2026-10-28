@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "notebook",
+  "name": "Тетрадь",
+  "order": 60,
+  "layout": "paper",
+  "palette": {
+    "surface": "#F8F2E6",
+    "border": "#E3D5BB",
+    "text": "#2F261C",
+    "secondary": "#6D5A43",
+    "muted": "#8B6E48",
+    "accent": "#E2A196",
+    "track": "#E8DCC6",
+    "container": "#5B4A36",
+    "number": "@muted"
+  },
+  "background": {
+    "radius": 14,
+    "clip": true,
+    "layers": [
+      {"type": "solid", "color": "@surface"},
+      {"type": "rules", "offset": 23, "step": 24, "width": 1, "color": "@track"},
+      {"type": "line", "x": 28, "width": 1, "color": "@accent"}
+    ],
+    "border": {"width": 1, "color": "@border"}
+  },
+  "typography": {
+    "header": {"font": "inter_tight", "size": 11, "weight": 600, "letterSpacing": 0.08, "uppercase": true, "color": "@muted"},
+    "title": {"font": "lora", "size": 30, "weight": 500, "letterSpacing": -0.01, "lineHeight": 1.1, "color": "@text"},
+    "details": {"font": "lora_italic", "size": 14, "weight": 400, "color": "@secondary"},
+    "nextTitle": {"base": "details", "size": 15, "color": "@text"},
+    "next": {"font": "inter_tight", "size": 13, "weight": 400, "color": "@container"},
+    "counter": {"font": "inter_tight", "size": 13, "weight": 600, "lineHeight": 1, "align": "end", "color": "@text"}
+  },
+  "metrics": {"textLeft": 40},
+  "strings": {
+    "headerNone": "{status}",
+    "headerLesson": "Сейчас · до {end}",
+    "headerUpcoming": "{status} · в {start}",
+    "headerNextDay": "{dayLabel} · в {start}",
+    "numberBadge": "№ {num}",
+    "details": {"first": ["{type}, аудитория {room}", "аудитория {room}", "{type}"]},
+    "detailsNextDay": {"first": ["{type}, аудитория {room}", "аудитория {room}", "{type}"]},
+    "nextPrefix": "{nextStart} — "
+  },
+  "backdrop": {"layers": [{"type": "solid", "color": "#D7CAB2"}]}
+}

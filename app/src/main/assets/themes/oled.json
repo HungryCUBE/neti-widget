@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "id": "oled",
+  "name": "Тёмный OLED",
+  "order": 30,
+  "layout": "ring",
+  "palette": {
+    "surface": "#000000",
+    "border": "#1F1F22",
+    "text": "#F2F2F2",
+    "secondary": "#A1A1A6",
+    "muted": "#8E8E93",
+    "accent": "#8FB0FF",
+    "track": "#1E1E22",
+    "divider": "#1A1A1D",
+    "nextDot": "@accent"
+  },
+  "background": {
+    "radius": 30,
+    "layers": [{"type": "solid", "color": "@surface"}],
+    "border": {"width": 1, "color": "@border"}
+  },
+  "typography": {
+    "defaults": {"font": "inter_tight"},
+    "header": {"size": 11, "weight": 500, "tabular": true, "color": "@muted"},
+    "title": {"size": 20, "weight": 600, "letterSpacing": -0.02, "lineHeight": 1.15, "tabular": true, "color": "@text"},
+    "details": {"size": 12, "weight": 400, "tabular": true, "color": "@muted"},
+    "next": {"size": 12, "weight": 400, "tabular": true, "color": "@secondary"},
+    "nextTime": {"base": "next", "weight": 500, "color": "@text"},
+    "counter": {"size": 26, "weight": 600, "lineHeight": 1, "tabular": true, "align": "center", "color": "@text"},
+    "unit": {"size": 10, "weight": 500, "lineHeight": 1.2, "color": "@muted"},
+    "time": {"size": 18, "weight": 600, "letterSpacing": -0.03, "lineHeight": 1.1, "tabular": true, "color": "@text"},
+    "placeholder": {"size": 18, "weight": 600, "lineHeight": 1.1, "color": "@muted"}
+  },
+  "metrics": {"ringDiameter": 76, "ringGap": 14},
+  "progress": {"type": "ring", "width": 5, "track": "@track", "fill": "@accent", "cap": "butt"},
+  "strings": {
+    "counterFormat": "{m}",
+    "ringTime": "{start}",
+    "ringDay": "{dayLabel|lower|short}",
+    "ringEmpty": "—",
+    "status": ["{status}", "{numLabel}"],
+    "statusCompact": "{status}",
+    "subCompact": {"first": ["{room}", "{numLabel}"]},
+    "details": ["{room}", "{type}", "{subgroup}"],
+    "detailsNextDay": ["{room}", "{type}", "{subgroup}"],
+    "nextName": ["{next}", "{nextType}"]
+  },
+  "variants": {
+    "short": {
+      "metrics": {"ringDiameter": 60},
+      "progress": {"width": 4.5},
+      "typography": {"counter": {"size": 18}, "unit": {"size": 9}, "time": {"size": 15}}
+    },
+    "compact": {
+      "metrics": {"ringDiameter": 52, "ringGap": 10},
+      "progress": {"width": 4.5},
+      "typography": {"counter": {"size": 18}, "unit": {"size": 9}, "time": {"size": 15}, "title": {"size": 17}},
+      "flags": {"stack": true}
+    }
+  },
+  "backdrop": {
+    "layers": [
+      {"type": "solid", "color": "#060607"},
+      {"type": "mesh", "points": [{"x": 0.7, "y": 0.2, "radius": 0.55, "color": "#1D2236"}]}
+    ]
+  }
+}

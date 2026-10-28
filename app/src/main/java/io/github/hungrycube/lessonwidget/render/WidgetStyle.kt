@@ -1,351 +1,318 @@
 package io.github.hungrycube.lessonwidget.render
 
 import android.content.Context
-import android.os.Build
-
-/** Отступы карточки в dp: сверху, по бокам, снизу. */
-data class Insets(val top: Float, val side: Float, val bottom: Float)
-
-/**
- * Цвета стиля (ARGB). Общие роли:
- * [text] — основной текст, [secondary] — детали, [muted] — подписи, [accent] — прогресс и акценты,
- * [track] — подложка прогресса. [container], [onContainer], [tag1]–[tag3] — дополнительные роли,
- * каждая разметка использует их по-своему (см. комментарии в [Styles]).
- */
-data class Palette(
-    val surface: Int,
-    val border: Int? = null,
-    val text: Int,
-    val secondary: Int,
-    val muted: Int,
-    val accent: Int,
-    val track: Int,
-    val container: Int = surface,
-    val onContainer: Int = text,
-    val tag1: Int = accent,
-    val tag2: Int = accent,
-    val tag3: Int = accent,
-)
-
-/** Фон под карточкой в превью (на рабочем столе вместо него — обои). */
-data class Backdrop(val base: Int, val blobs: List<Blob> = emptyList(), val stripes: Int? = null)
-
-/** Цветное пятно фона: центр и радиус в долях размера превью. */
-data class Blob(val x: Float, val y: Float, val radius: Float, val color: Int)
-
-/** Расположение элементов карточки. Новый стиль может переиспользовать любую разметку со своими цветами и шрифтами. */
-enum class CardLayout {
-    /** Плашка с номером пары, крупное название, светящаяся полоса. */
-    GLASS,
-    /** Время пары и номер, крупное название, тонкая линия прогресса. */
-    CLEAN,
-    /** Кольцо обратного отсчёта слева, название справа. */
-    RING,
-    /** Строки консоли с текстовым прогресс-баром. */
-    TERMINAL,
-    /** Тональный контейнер Material 3 с иконкой и пилюлей следующей пары. */
-    TONAL,
-    /** Лист в линейку с полем, без прогресса. */
-    PAPER,
-    /** Крупные точечные цифры и ряд из 24 точек. */
-    DOTS,
-    /** Окно Windows 95. */
-    RETRO,
-    /** Цветные теги, жёлтая плашка недели. */
-    TAGS,
-}
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.AtomicFile
+import android.util.LruCache
+import io.github.hungrycube.lessonwidget.data.CrashLog
+import io.github.hungrycube.lessonwidget.render.layout.Layouts
+import io.github.hungrycube.lessonwidget.render.theme.AdaptSpec
+import io.github.hungrycube.lessonwidget.render.theme.ColorSources
+import io.github.hungrycube.lessonwidget.render.theme.Problems
+import io.github.hungrycube.lessonwidget.render.theme.Theme
+import io.github.hungrycube.lessonwidget.render.theme.ThemeAssets
+import io.github.hungrycube.lessonwidget.render.theme.ThemeException
+import io.github.hungrycube.lessonwidget.render.theme.ThemeLoader
+import io.github.hungrycube.lessonwidget.render.theme.ThemeSpec
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Тема виджета. Чтобы добавить стиль, достаточно описать ещё один объект в [Styles]
- * (с одной из существующих разметок [CardLayout]).
+ * Стиль виджета, загруженный из JSON. Хранит склеенные слои файла (умолчания → extends → сам файл),
+ * а готовую [Theme] под конкретный размер собирает в [theme].
  */
-data class WidgetStyle(
+class WidgetStyle internal constructor(
     val id: String,
     val title: String,
-    val layout: CardLayout,
-    val radius: Float,
-    val padding: Insets = Insets(16f, 18f, 14f),
-    val palette: Palette,
-    /** Крупное название пары. */
-    val heading: Typo,
-    /** Шапка: плашки, статус, время. */
-    val label: Typo,
-    /** Строка деталей: аудитория, тип. */
-    val body: Typo,
-    /** Нижняя строка со следующей парой и список пар дня. */
-    val meta: Typo,
-    /** Шрифт цифр обратного отсчёта или null, если стиль его не показывает. */
-    val countdown: CountdownLayout?,
-    /** Маркер текущей пары в списке дня (большой виджет). */
-    val listMarker: String? = null,
-    val backdrop: Backdrop,
-    /** Брать цвета из обоев (Material You, Android 12+). */
-    val dynamicColor: Boolean = false,
+    val order: Int,
+    val layout: String,
+    val sizes: Set<String>,
+    val adapt: AdaptSpec,
+    private val chain: List<JsonObject>,
+    private val assets: ThemeAssets,
+    /** Предупреждения загрузчика (например, нет шрифта — будет системный). */
+    val warnings: List<String>,
+    /** Откуда стиль: файл в assets или импортированный. */
+    val source: String,
 ) {
-    /** Стиль с учётом динамических цветов телефона. */
-    fun resolved(context: Context): WidgetStyle {
-        if (!dynamicColor || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return this
-        fun c(id: Int) = context.getColor(id)
-        return copy(
-            palette = palette.copy(
-                surface = c(android.R.color.system_neutral1_10),
-                container = c(android.R.color.system_accent1_100),
-                onContainer = c(android.R.color.system_accent1_900),
-                accent = c(android.R.color.system_accent1_600),
-                secondary = c(android.R.color.system_accent1_700),
-                track = c(android.R.color.system_accent1_200),
-                tag1 = c(android.R.color.system_neutral2_50),
-                text = c(android.R.color.system_neutral1_900),
-                muted = c(android.R.color.system_neutral2_700),
-            ),
+    private val specs = ConcurrentHashMap<List<String>, ThemeSpec>()
+
+    fun spec(forms: List<String>): ThemeSpec = specs.getOrPut(forms) { ThemeLoader.decode(ThemeLoader.compose(chain, forms), source) }
+
+    /** Тема для формы [forms] (см. [SizeClass.forms]). [widget] — для рабочего стола. */
+    fun theme(forms: List<String>, sources: ColorSources, widget: Boolean): Theme =
+        ThemeLoader.resolve(spec(forms), sources, assets, widget)
+
+    override fun toString() = "WidgetStyle($id)"
+}
+
+/** Результат импорта своего стиля. */
+class ImportResult(val style: WidgetStyle?, val errors: List<String>, val warnings: List<String>)
+
+/**
+ * Все стили: файлы assets/themes/*.json и импортированные (filesDir/themes/*.json).
+ * Новый стиль — новый файл, галерея и выбор строятся по ним сами.
+ */
+object Styles {
+    const val DEFAULT_ID = "minimal"
+
+    private const val ASSET_DIR = "themes"
+    private const val DEFAULTS_ASSET = "engine/defaults.json"
+    private const val USER_DIR = "themes"
+
+    /** Стиль на крайний случай, если файлы стилей не читаются. */
+    private const val FALLBACK_JSON = """
+        {
+          "schemaVersion": 1, "id": "fallback", "name": "Запасной", "layout": "clean",
+          "palette": {"surface": "#FFFFFF", "text": "#141414", "secondary": "#5F5F5F", "muted": "#8A8A8A",
+                      "accent": "#141414", "track": "#E6E6E6", "number": "#A0A0A0", "nextTitle": "#3D3D3D"},
+          "background": {"radius": 24, "layers": [{"type": "solid", "color": "@surface"}]},
+          "typography": {
+            "defaults": {"font": "system"},
+            "header": {"size": 12, "color": "@muted"},
+            "title": {"size": 26, "weight": 700, "lineHeight": 1.15, "color": "@text"},
+            "details": {"size": 13, "color": "@secondary"},
+            "next": {"size": 12, "color": "@muted"},
+            "counter": {"size": 12, "weight": 700, "lineHeight": 1, "align": "end", "color": "@text"}
+          },
+          "progress": {"type": "line", "height": 2, "radius": 0}
+        }
+    """
+
+    class Catalog(val styles: List<WidgetStyle>, val problems: List<String>)
+
+    private val lock = Any()
+
+    @Volatile
+    private var catalog: Catalog? = null
+
+    @Volatile
+    private var fallbackStyle: WidgetStyle? = null
+
+    fun all(context: Context): List<WidgetStyle> = catalog(context).styles
+
+    /** Стиль по id; если его нет или файл сломан — стиль по умолчанию. */
+    fun byId(context: Context, id: String?): WidgetStyle {
+        val all = all(context)
+        return all.firstOrNull { it.id == id } ?: all.firstOrNull { it.id == DEFAULT_ID } ?: all.firstOrNull() ?: fallback(context)
+    }
+
+    /** Ошибки в файлах стилей с последней загрузки. */
+    fun problems(context: Context): List<String> = catalog(context).problems
+
+    fun fallback(context: Context): WidgetStyle = fallbackStyle ?: synchronized(lock) {
+        fallbackStyle ?: run {
+            val raw = ThemeLoader.parse(FALLBACK_JSON, "fallback")
+            val chain = listOf(defaults(context), raw)
+            val problems = Problems()
+            val style = build(context, "fallback", chain, assetsFor(context, null), problems)
+                ?: throw ThemeException(problems.errors.joinToString("\n"))
+            style.also { fallbackStyle = it }
+        }
+    }
+
+    /** Перечитать файлы (после импорта). */
+    fun reload() {
+        catalog = null
+        FontCache.clear()
+    }
+
+    fun userDir(context: Context): File = File(context.applicationContext.filesDir, USER_DIR)
+
+    /**
+     * Импорт своего стиля: тот же загрузчик, что и для встроенных, только файл из другого места.
+     * [fonts] — файлы шрифтов «имя.ttf» → содержимое. Стиль с ошибками не сохраняется.
+     */
+    fun import(context: Context, json: String, fonts: Map<String, ByteArray> = emptyMap()): ImportResult {
+        val app = context.applicationContext
+        val raw = try {
+            ThemeLoader.parse(json, "импорт")
+        } catch (e: ThemeException) {
+            return ImportResult(null, listOf(e.message.orEmpty()), emptyList())
+        }
+        val id = (raw["id"] as? JsonPrimitive)?.content.orEmpty()
+        if (all(app).any { it.id == id && it.source.startsWith("assets/") }) {
+            return ImportResult(null, listOf("id: «$id» занят встроенным стилем, выберите другой"), emptyList())
+        }
+        val badFont = fonts.keys.firstOrNull { !it.matches(Regex("[a-z0-9_]+\\.(ttf|otf)")) }
+        if (badFont != null) return ImportResult(null, listOf("шрифт «$badFont»: имя из строчных латинских букв, цифр и _, .ttf или .otf"), emptyList())
+        val dir = userDir(app)
+        val fontDir = File(dir, "fonts")
+        fontDir.mkdirs()
+        for ((name, bytes) in fonts) writeAtomically(File(fontDir, name), bytes)
+        FontCache.extraDirs = listOf(fontDir)
+        FontCache.clear()
+        val problems = Problems()
+        val style = load(app, "$id.json (импорт)", raw, rawById(app), assetsFor(app, dir), problems)
+        if (style == null) return ImportResult(null, problems.errors, problems.warnings)
+        writeAtomically(File(dir, "$id.json"), json.toByteArray(Charsets.UTF_8))
+        reload()
+        return ImportResult(byId(app, id).takeIf { it.id == id }, emptyList(), problems.warnings)
+    }
+
+    // ---------- Загрузка ----------
+
+    private fun catalog(context: Context): Catalog = catalog ?: synchronized(lock) {
+        catalog ?: loadCatalog(context.applicationContext).also { catalog = it }
+    }
+
+    private class RawFile(val obj: JsonObject, val source: String, val userDir: File?)
+
+    @Volatile
+    private var defaultsCache: JsonObject? = null
+
+    private fun defaults(context: Context): JsonObject = defaultsCache ?: run {
+        val text = context.assets.open(DEFAULTS_ASSET).bufferedReader().use { it.readText() }
+        ThemeLoader.parse(text, DEFAULTS_ASSET).also { defaultsCache = it }
+    }
+
+    private fun rawFiles(context: Context, problems: Problems): List<RawFile> {
+        val out = ArrayList<RawFile>()
+        val names = runCatching { context.assets.list(ASSET_DIR)?.toList() }.getOrNull().orEmpty().filter { it.endsWith(".json") }.sorted()
+        for (name in names) {
+            try {
+                val text = context.assets.open("$ASSET_DIR/$name").bufferedReader().use { it.readText() }
+                out += RawFile(ThemeLoader.parse(text, name), "assets/$ASSET_DIR/$name", null)
+            } catch (e: ThemeException) {
+                problems.errors += e.message.orEmpty()
+            }
+        }
+        val dir = userDir(context)
+        FontCache.extraDirs = listOf(File(dir, "fonts"))
+        dir.listFiles { f -> f.isFile && f.name.endsWith(".json") }?.sortedBy { it.name }?.forEach { file ->
+            try {
+                out += RawFile(ThemeLoader.parse(file.readText(), file.name), "files/${file.name}", dir)
+            } catch (e: Exception) {
+                problems.errors += e.message ?: file.name
+            }
+        }
+        return out
+    }
+
+    private fun rawById(context: Context): Map<String, JsonObject> =
+        rawFiles(context, Problems()).associate { (it.obj["id"] as? JsonPrimitive)?.content.orEmpty() to it.obj }
+
+    private fun loadCatalog(context: Context): Catalog {
+        val problems = Problems()
+        val files = rawFiles(context, problems)
+        val byId = LinkedHashMap<String, JsonObject>()
+        for (f in files) {
+            val id = (f.obj["id"] as? JsonPrimitive)?.content.orEmpty()
+            if (id in byId) problems.errors += "${f.source}: id «$id» уже есть у другого стиля" else byId[id] = f.obj
+        }
+        val styles = files.mapNotNull { f ->
+            val id = (f.obj["id"] as? JsonPrimitive)?.content.orEmpty()
+            if (byId[id] !== f.obj) return@mapNotNull null
+            load(context, f.source, f.obj, byId, assetsFor(context, f.userDir), problems)
+        }.sortedWith(compareBy<WidgetStyle> { it.order }.thenBy { it.title })
+        if (problems.errors.isNotEmpty()) {
+            CrashLog.record(context, "Файлы стилей", ThemeException(problems.errors.joinToString("\n")))
+        }
+        return Catalog(styles, problems.errors + problems.warnings)
+    }
+
+    /** Загружает один стиль: склеивает с умолчаниями и extends, проверяет все сочетания вариантов. */
+    private fun load(
+        context: Context,
+        source: String,
+        raw: JsonObject,
+        byId: Map<String, JsonObject>,
+        assets: ThemeAssets,
+        problems: Problems,
+    ): WidgetStyle? {
+        val chain = ArrayList<JsonObject>()
+        var cur: JsonObject? = raw
+        val seen = HashSet<String>()
+        while (cur != null) {
+            chain.add(0, cur)
+            val parent = (cur["extends"] as? JsonPrimitive)?.content ?: break
+            if (!seen.add(parent) || seen.size > 8) {
+                problems.errors += "$source: extends — стили наследуют друг друга по кругу"
+                return null
+            }
+            cur = byId[parent] ?: run {
+                problems.errors += "$source: extends — нет стиля «$parent»"
+                return null
+            }
+        }
+        chain.add(0, defaults(context))
+        return build(context, source, chain, assets, problems)
+    }
+
+    private fun build(context: Context, source: String, chain: List<JsonObject>, assets: ThemeAssets, problems: Problems): WidgetStyle? {
+        val local = Problems()
+        val fontExists = { name: String -> FontCache.exists(context, name) }
+        val variantForms = ThemeLoader.variantForms(chain)
+        val combos = subsets(variantForms.filter { it in ThemeLoader.FORMS })
+        var base: ThemeSpec? = null
+        for (forms in combos) {
+            try {
+                val spec = ThemeLoader.decode(ThemeLoader.compose(chain, forms), source)
+                if (forms.isEmpty()) base = spec
+                val p = ThemeLoader.check(spec, Layouts.ids, fontExists, variantForms)
+                val label = if (forms.isEmpty()) "" else " (вариант ${forms.joinToString("+")})"
+                p.errors.forEach { local.errors += "$source$label: $it" }
+                p.warnings.forEach { local.warnings += "$source$label: $it" }
+            } catch (e: ThemeException) {
+                local.errors += e.message.orEmpty()
+            }
+        }
+        problems.errors += local.errors.distinct()
+        problems.warnings += local.warnings.distinct()
+        val spec = base ?: return null
+        if (local.errors.isNotEmpty()) return null
+        return WidgetStyle(
+            id = spec.id,
+            title = spec.name,
+            order = spec.order,
+            layout = spec.layout,
+            sizes = spec.sizes.toSet(),
+            adapt = spec.adapt,
+            chain = chain,
+            assets = assets,
+            warnings = local.warnings.distinct(),
+            source = source,
         )
+    }
+
+    private fun subsets(items: List<String>): List<List<String>> =
+        items.fold(listOf(emptyList<String>())) { acc, x -> acc + acc.map { it + x } }
+            .map { set -> ThemeLoader.FORMS.filter { it in set } }
+
+    private val images = LruCache<String, Bitmap>(8)
+
+    /** Картинки стиля: из assets/themes или из папки импортированных; «@photo» — своё фото. */
+    private fun assetsFor(context: Context, userDir: File?): ThemeAssets = ThemeAssets { src ->
+        val key = (userDir?.path ?: "assets") + "/" + src
+        images.get(key) ?: runCatching {
+            val opts = BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.ARGB_8888 }
+            when {
+                src == ThemeLoader.PHOTO_SRC -> PhotoStore.file(context).takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.path, opts) }
+                userDir != null -> BitmapFactory.decodeFile(File(userDir, src).path, opts)
+                else -> context.assets.open("$ASSET_DIR/$src").use { BitmapFactory.decodeStream(it, null, opts) }
+            }
+        }.getOrNull()?.also { images.put(key, it) }
+    }
+
+    private fun writeAtomically(file: File, bytes: ByteArray) {
+        val af = AtomicFile(file)
+        val out = af.startWrite()
+        try {
+            out.write(bytes)
+            af.finishWrite(out)
+        } catch (e: Exception) {
+            af.failWrite(out)
+            throw e
+        }
     }
 }
 
-private fun argb(hex: Long): Int = hex.toInt()
+/** Своё фото для слоя photo и цветов @photo. Выбора в интерфейсе пока нет — файл кладётся сюда. */
+object PhotoStore {
+    fun file(context: Context): File = File(context.applicationContext.filesDir, "theme_photo.jpg")
 
-/** Все 9 стилей. Цвета, размеры и шрифты — из design/widget-styles-reference.html. */
-object Styles {
-
-    val GLASS = WidgetStyle(
-        id = "glass",
-        title = "Стекло",
-        layout = CardLayout.GLASS,
-        radius = 30f,
-        palette = Palette(
-            surface = argb(0x21FFFFFF),
-            border = argb(0x52FFFFFF),
-            text = argb(0xFFFFFFFF),
-            secondary = argb(0xCCFFFFFF),
-            muted = argb(0xE0FFFFFF),
-            accent = argb(0xFFFFFFFF),
-            track = argb(0x33FFFFFF),
-        ),
-        heading = Typo(AppFont.MANROPE, 26f, 800, tracking = -0.02f, lineHeight = 1.15f),
-        label = Typo(AppFont.MANROPE, 11f, 700),
-        body = Typo(AppFont.MANROPE, 13f, 500),
-        meta = Typo(AppFont.MANROPE, 12f, 600),
-        countdown = CountdownLayout.MANROPE_END,
-        backdrop = Backdrop(
-            base = argb(0xFF1B1450),
-            blobs = listOf(
-                Blob(0.18f, 0.22f, 0.42f, argb(0xFFFF8A5C)),
-                Blob(0.82f, 0.78f, 0.50f, argb(0xFF4B5BFF)),
-                Blob(0.74f, 0.12f, 0.38f, argb(0xFFFF4F9A)),
-                Blob(0.30f, 0.90f, 0.40f, argb(0xFF20C4B5)),
-            ),
-        ),
-    )
-
-    /** container — цвет номера пары, onContainer — название следующей пары. */
-    val MINIMAL = WidgetStyle(
-        id = "minimal",
-        title = "Минимализм",
-        layout = CardLayout.CLEAN,
-        radius = 26f,
-        palette = Palette(
-            surface = argb(0xFFFBFAF7),
-            text = argb(0xFF141414),
-            secondary = argb(0xFF6D6962),
-            muted = argb(0xFF8C887F),
-            accent = argb(0xFF141414),
-            track = argb(0xFFE9E5DC),
-            container = argb(0xFFB4AFA5),
-            onContainer = argb(0xFF3D3B37),
-        ),
-        heading = Typo(AppFont.INTER_TIGHT, 30f, 600, tracking = -0.035f, lineHeight = 1.15f, tabular = true),
-        label = Typo(AppFont.INTER_TIGHT, 12f, 500, tabular = true),
-        body = Typo(AppFont.INTER_TIGHT, 13f, 400, tabular = true),
-        meta = Typo(AppFont.INTER_TIGHT, 12f, 400, tabular = true),
-        countdown = CountdownLayout.INTER_TIGHT_END,
-        backdrop = Backdrop(argb(0xFFE4E0D7)),
-    )
-
-    /** container — разделитель над следующей парой. */
-    val OLED = WidgetStyle(
-        id = "oled",
-        title = "Тёмный OLED",
-        layout = CardLayout.RING,
-        radius = 30f,
-        palette = Palette(
-            surface = argb(0xFF000000),
-            border = argb(0xFF1F1F22),
-            text = argb(0xFFF2F2F2),
-            secondary = argb(0xFFA1A1A6),
-            muted = argb(0xFF8E8E93),
-            accent = argb(0xFF8FB0FF),
-            track = argb(0xFF1E1E22),
-            container = argb(0xFF1A1A1D),
-        ),
-        heading = Typo(AppFont.INTER_TIGHT, 20f, 600, tracking = -0.02f, lineHeight = 1.15f, tabular = true),
-        label = Typo(AppFont.INTER_TIGHT, 11f, 500, tabular = true),
-        body = Typo(AppFont.INTER_TIGHT, 12f, 400, tabular = true),
-        meta = Typo(AppFont.INTER_TIGHT, 12f, 400, tabular = true),
-        countdown = CountdownLayout.INTER_TIGHT_CENTER,
-        backdrop = Backdrop(argb(0xFF060607), listOf(Blob(0.7f, 0.2f, 0.55f, argb(0xFF1D2236)))),
-    )
-
-    /** text — яркий зелёный, secondary — обычный, muted — тусклый, track — пустые блоки. */
-    val TERMINAL = WidgetStyle(
-        id = "terminal",
-        title = "Терминал",
-        layout = CardLayout.TERMINAL,
-        radius = 16f,
-        padding = Insets(16f, 18f, 16f),
-        palette = Palette(
-            surface = argb(0xFF0A0D0B),
-            border = argb(0xFF1F2B23),
-            text = argb(0xFFCFF8DA),
-            secondary = argb(0xFF8FD9A4),
-            muted = argb(0xFF4E6B57),
-            accent = argb(0xFFCFF8DA),
-            track = argb(0xFF2B3D31),
-        ),
-        heading = Typo(AppFont.JETBRAINS_MONO, 15f, 700, lineHeight = 1.6f),
-        label = Typo(AppFont.JETBRAINS_MONO, 12f, 400, lineHeight = 1.6f),
-        body = Typo(AppFont.JETBRAINS_MONO, 12f, 400, lineHeight = 1.6f),
-        meta = Typo(AppFont.JETBRAINS_MONO, 12f, 400, lineHeight = 1.6f),
-        countdown = null,
-        listMarker = "▸",
-        backdrop = Backdrop(argb(0xFF121714)),
-    )
-
-    /**
-     * container / onContainer — тональный контейнер, accent — иконка и прогресс,
-     * secondary — подписи в контейнере, tag1 — пилюля следующей пары, text / muted — текст в пилюле.
-     */
-    val MATERIAL = WidgetStyle(
-        id = "material",
-        title = "Material You",
-        layout = CardLayout.TONAL,
-        radius = 32f,
-        padding = Insets(9f, 9f, 9f),
-        palette = Palette(
-            surface = argb(0xFFFDF8FF),
-            text = argb(0xFF1D1B20),
-            secondary = argb(0xFF4F378B),
-            muted = argb(0xFF49454F),
-            accent = argb(0xFF6750A4),
-            track = argb(0xFFCFBCFF),
-            container = argb(0xFFE9DDFF),
-            onContainer = argb(0xFF21005D),
-            tag1 = argb(0xFFF1EBF7),
-        ),
-        heading = Typo(AppFont.ROBOTO_FLEX, 20f, 700, tracking = -0.01f, lineHeight = 1.15f),
-        label = Typo(AppFont.ROBOTO_FLEX, 11f, 600),
-        body = Typo(AppFont.ROBOTO_FLEX, 12f, 500),
-        meta = Typo(AppFont.ROBOTO_FLEX, 13f, 600),
-        countdown = CountdownLayout.ROBOTO_FLEX_END,
-        backdrop = Backdrop(
-            base = argb(0xFFE7E0F2),
-            blobs = listOf(
-                Blob(0.15f, 0.85f, 0.45f, argb(0xFFC9B8F0)),
-                Blob(0.90f, 0.10f, 0.40f, argb(0xFFF3C9DD)),
-            ),
-        ),
-        dynamicColor = true,
-    )
-
-    /** accent — красное поле, track — линейки, container — текст нижней строки. */
-    val NOTEBOOK = WidgetStyle(
-        id = "notebook",
-        title = "Тетрадь",
-        layout = CardLayout.PAPER,
-        radius = 14f,
-        padding = Insets(16f, 18f, 14f),
-        palette = Palette(
-            surface = argb(0xFFF8F2E6),
-            border = argb(0xFFE3D5BB),
-            text = argb(0xFF2F261C),
-            secondary = argb(0xFF6D5A43),
-            muted = argb(0xFF8B6E48),
-            accent = argb(0xFFE2A196),
-            track = argb(0xFFE8DCC6),
-            container = argb(0xFF5B4A36),
-        ),
-        heading = Typo(AppFont.LORA, 30f, 500, tracking = -0.01f, lineHeight = 1.1f),
-        label = Typo(AppFont.INTER_TIGHT, 11f, 600, tracking = 0.08f, caps = true),
-        body = Typo(AppFont.LORA_ITALIC, 14f, 400),
-        meta = Typo(AppFont.INTER_TIGHT, 13f, 400),
-        countdown = null,
-        backdrop = Backdrop(argb(0xFFD7CAB2)),
-    )
-
-    /** accent — красный, track — непройденные точки. */
-    val NOTHING = WidgetStyle(
-        id = "nothing",
-        title = "Nothing",
-        layout = CardLayout.DOTS,
-        radius = 28f,
-        palette = Palette(
-            surface = argb(0xFFF6F6F4),
-            text = argb(0xFF111111),
-            secondary = argb(0xFF111111),
-            muted = argb(0xFF7A7A76),
-            accent = argb(0xFFD71921),
-            track = argb(0xFFD6D6D2),
-        ),
-        heading = Typo(AppFont.JETBRAINS_MONO, 15f, 700, tracking = 0.03f, lineHeight = 1.05f, caps = true),
-        label = Typo(AppFont.JETBRAINS_MONO, 10f, 700, tracking = 0.12f, caps = true),
-        body = Typo(AppFont.JETBRAINS_MONO, 10f, 400, tracking = 0.1f, caps = true),
-        meta = Typo(AppFont.JETBRAINS_MONO, 10f, 400, tracking = 0.1f, caps = true),
-        countdown = CountdownLayout.DOTO_START,
-        backdrop = Backdrop(argb(0xFFD4D4D1)),
-    )
-
-    /** accent — синий заголовок и прогресс, container — правый край градиента заголовка. */
-    val WIN95 = WidgetStyle(
-        id = "win95",
-        title = "Win95",
-        layout = CardLayout.RETRO,
-        radius = 0f,
-        padding = Insets(3f, 3f, 3f),
-        palette = Palette(
-            surface = argb(0xFFC0C0C0),
-            text = argb(0xFF000000),
-            secondary = argb(0xFF000000),
-            muted = argb(0xFF808080),
-            accent = argb(0xFF000080),
-            track = argb(0xFFFFFFFF),
-            container = argb(0xFF1084D0),
-        ),
-        heading = Typo(AppFont.SYSTEM, 13f, 700),
-        label = Typo(AppFont.SYSTEM, 11f, 700),
-        body = Typo(AppFont.SYSTEM, 11f, 400),
-        meta = Typo(AppFont.SYSTEM, 11f, 400),
-        countdown = null,
-        backdrop = Backdrop(argb(0xFF008080)),
-    )
-
-    /** container — жёлтая плашка недели, tag1–tag3 — теги типа, аудитории и времени, accent — прогресс. */
-    val NETI = WidgetStyle(
-        id = "neti",
-        title = "НЭТИ",
-        layout = CardLayout.TAGS,
-        radius = 18f,
-        palette = Palette(
-            surface = argb(0xFFFFFFFF),
-            text = argb(0xFF111111),
-            secondary = argb(0xFF111111),
-            muted = argb(0xFF6B6B6B),
-            accent = argb(0xFFD0124F),
-            track = argb(0xFFECECEC),
-            container = argb(0xFFF5A800),
-            tag1 = argb(0xFF00A861),
-            tag2 = argb(0xFF0C3B33),
-            tag3 = argb(0xFF1E88E5),
-        ),
-        heading = Typo(AppFont.MONTSERRAT, 26f, 900, tracking = -0.02f, lineHeight = 1.05f),
-        label = Typo(AppFont.MONTSERRAT, 10f, 800),
-        body = Typo(AppFont.MONTSERRAT, 9f, 800, caps = true),
-        meta = Typo(AppFont.MONTSERRAT, 10f, 800, tracking = 0.04f, caps = true),
-        countdown = CountdownLayout.MONTSERRAT_END,
-        backdrop = Backdrop(argb(0xFFEBE7E2), stripes = argb(0xFFD0124F)),
-    )
-
-    val all: List<WidgetStyle> = listOf(GLASS, MINIMAL, OLED, TERMINAL, MATERIAL, NOTEBOOK, NOTHING, WIN95, NETI)
-
-    const val DEFAULT_ID = "minimal"
-
-    fun byId(id: String?): WidgetStyle = all.firstOrNull { it.id == id } ?: MINIMAL
+    fun bitmap(context: Context): Bitmap? = file(context).takeIf { it.isFile }?.let { runCatching { BitmapFactory.decodeFile(it.path) }.getOrNull() }
 }

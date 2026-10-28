@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "nothing",
+  "name": "Nothing",
+  "order": 70,
+  "layout": "dots",
+  "palette": {
+    "surface": "#F6F6F4",
+    "text": "#111111",
+    "secondary": "#111111",
+    "muted": "#7A7A76",
+    "accent": "#D71921",
+    "track": "#D6D6D2",
+    "statusDot": "@accent"
+  },
+  "background": {
+    "radius": 28,
+    "layers": [{"type": "solid", "color": "@surface"}]
+  },
+  "typography": {
+    "defaults": {"font": "jetbrains_mono"},
+    "header": {"size": 10, "weight": 700, "letterSpacing": 0.12, "uppercase": true, "color": "@text"},
+    "title": {"size": 15, "weight": 700, "letterSpacing": 0.03, "lineHeight": 1.05, "uppercase": true, "color": "@text"},
+    "details": {"size": 10, "weight": 400, "letterSpacing": 0.1, "uppercase": true, "color": "@muted"},
+    "next": {"size": 10, "weight": 400, "letterSpacing": 0.1, "uppercase": true, "color": "@muted"},
+    "nextLabel": {"base": "next", "weight": 700, "color": "@accent"},
+    "hero": {"font": "doto", "size": 64, "weight": 900, "letterSpacing": -0.03, "lineHeight": 1, "tabular": true, "color": "@text"},
+    "counter": {"font": "doto", "size": 64, "weight": 900, "lineHeight": 1, "tabular": true, "align": "start", "color": "@text"}
+  },
+  "metrics": {"statusDot": 3.5, "heroWidth": 0.5, "progressGap": 10},
+  "progress": {"type": "dots", "height": 7, "step": 9, "max": 24, "fill": "@text", "current": "@accent", "track": "@track"},
+  "strings": {
+    "counterFormat": "{m}",
+    "headerRight": "{start}—{end}",
+    "heroNone": "--",
+    "sub": ["{cdUnit}", "{typeShort}", "{room}"],
+    "nextLabel": "Далее",
+    "nextTime": " {nextStart}",
+    "nextTitle": " {next}"
+  },
+  "variants": {
+    "compact": {
+      "metrics": {"heroWidth": 1},
+      "typography": {"hero": {"size": 44}, "counter": {"size": 44}},
+      "flags": {"stack": true, "nextShort": true},
+      "strings": {"headerRight": ""}
+    }
+  },
+  "backdrop": {"layers": [{"type": "solid", "color": "#D4D4D1"}]}
+}

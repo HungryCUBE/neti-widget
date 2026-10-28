@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "id": "win95",
+  "name": "Win95",
+  "order": 80,
+  "layout": "retro",
+  "palette": {
+    "surface": "#C0C0C0",
+    "text": "#000000",
+    "secondary": "#000000",
+    "muted": "#808080",
+    "accent": "#000080",
+    "track": "#FFFFFF",
+    "container": "#1084D0",
+    "bevelLight": "#FFFFFF",
+    "bevelShadow": "#808080",
+    "bevelOuterLight": "#DFDFDF",
+    "bevelOuterDark": "#0A0A0A",
+    "titleBarStart": "@accent",
+    "titleBarEnd": "@container",
+    "titleText": "#FFFFFF"
+  },
+  "background": {
+    "radius": 0,
+    "layers": [{"type": "solid", "color": "@surface"}]
+  },
+  "spacing": {"top": 3, "side": 3, "bottom": 3},
+  "typography": {
+    "defaults": {"font": "system"},
+    "header": {"size": 11, "weight": 700, "color": "@text"},
+    "title": {"size": 13, "weight": 700, "color": "@text"},
+    "details": {"size": 11, "weight": 400, "color": "@text"},
+    "next": {"size": 11, "weight": 400, "color": "@text"},
+    "counter": {"size": 11, "weight": 700, "lineHeight": 1, "align": "end", "color": "@text"}
+  },
+  "metrics": {"iconSize": 32, "menuMinWidth": 160},
+  "progress": {"type": "blocks", "height": 16, "block": 8, "gap": 2, "inset": 3, "frame": "bevel", "track": "@track", "fill": "@accent"},
+  "adapt": {"widgetInset": 8},
+  "agenda": {"muted": "#404040"},
+  "icons": {
+    "slots": {"window": "win95-calendar", "document": "win95-doc"},
+    "custom": {
+      "win95-calendar": {"pixels": [
+        [1, 2, 14, 13, "#000000"], [2, 3, 12, 11, "#FFFFFF"], [2, 3, 12, 3, "#C00000"],
+        [4, 8, 2, 2, "#808080"], [7, 8, 2, 2, "#808080"], [10, 8, 2, 2, "#000080"], [4, 11, 2, 2, "#808080"]
+      ]},
+      "win95-doc": {"pixels": [
+        [2, 1, 11, 14, "#000000"], [3, 2, 9, 12, "#FFFFFF"], [3, 2, 2, 12, "#000080"],
+        [6, 4, 5, 1, "#808080"], [6, 6, 5, 1, "#808080"], [6, 8, 3, 1, "#808080"], [13, 3, 1, 11, "#808080"]
+      ]}
+    }
+  },
+  "strings": {
+    "windowTitle": "{phaseTitle} — {group}",
+    "buttonClose": "×",
+    "buttonMinimize": "_",
+    "menu": ["Файл", "Вид", "Неделя", "?"],
+    "titleType": " ({type})",
+    "details": ["Ауд. {room}", "{start} → {end}"],
+    "detailsNextDay": ["Ауд. {room}", "{start} → {end}"],
+    "buttonLesson": "Прогулять",
+    "buttonNoData": "Обновить",
+    "buttonOk": "ОК",
+    "rowLesson": "Осталось примерно {duration}",
+    "rowUpcoming": "До начала примерно {duration}",
+    "rowNextDay": "{dayLabel} в {start}",
+    "statusNext": "Далее: {@statusNextList}",
+    "statusNextList": ["{next}", "{nextStart}", "{nextRoom}"]
+  },
+  "variants": {
+    "compact": {"metrics": {"iconSize": 24}}
+  },
+  "backdrop": {"layers": [{"type": "solid", "color": "#008080"}]}
+}

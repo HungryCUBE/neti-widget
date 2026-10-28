@@ -73,7 +73,7 @@ private fun WidgetContent(context: Context, appWidgetId: Int) {
         s to draw(s)
     }.getOrElse {
         CrashLog.record(context, "Отрисовка виджета $appWidgetId", it)
-        val s = WidgetState(appWidgetId, null, Styles.MINIMAL, null, DisplayBuilder.build(null, "—", null, now))
+        val s = WidgetState(appWidgetId, null, Styles.fallback(context), null, DisplayBuilder.build(null, "—", null, now))
         s to draw(s)
     }
     val action = if (state.group != null && state.display.phase == Phase.NO_DATA) {

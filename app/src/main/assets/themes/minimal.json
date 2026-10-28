@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "minimal",
+  "name": "Минимализм",
+  "order": 20,
+  "layout": "clean",
+  "palette": {
+    "surface": "#FBFAF7",
+    "text": "#141414",
+    "secondary": "#6D6962",
+    "muted": "#8C887F",
+    "accent": "#141414",
+    "track": "#E9E5DC",
+    "number": "#B4AFA5",
+    "nextTitle": "#3D3B37"
+  },
+  "background": {
+    "radius": 26,
+    "layers": [{"type": "solid", "color": "@surface"}]
+  },
+  "typography": {
+    "defaults": {"font": "inter_tight", "tabular": true},
+    "header": {"size": 12, "weight": 500, "color": "@muted"},
+    "title": {"size": 30, "weight": 600, "letterSpacing": -0.035, "lineHeight": 1.15, "color": "@text"},
+    "details": {"size": 13, "weight": 400, "color": "@secondary"},
+    "next": {"size": 12, "weight": 400, "color": "@muted"},
+    "counter": {"size": 12, "weight": 600, "lineHeight": 1, "align": "end", "color": "@text"}
+  },
+  "progress": {"type": "line", "height": 2, "radius": 0, "track": "@track", "fill": "@accent"},
+  "strings": {
+    "headerNone": "{status}",
+    "headerLesson": "{start} — {end}",
+    "headerUpcoming": "{status} · {start} — {end}",
+    "headerNextDay": "{dayLabel} · {start} — {end}",
+    "numberBadge": "{num2}",
+    "details": ["{room}", "{type}", "{subgroup}"],
+    "detailsNextDay": ["{room}", "{type}", "{subgroup}"],
+    "nextPrefix": "Далее — ",
+    "nextSuffix": ", {nextStart}"
+  },
+  "backdrop": {"layers": [{"type": "solid", "color": "#E4E0D7"}]}
+}

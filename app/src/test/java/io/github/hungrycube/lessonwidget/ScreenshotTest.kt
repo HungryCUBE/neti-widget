@@ -70,7 +70,7 @@ class ScreenshotTest {
         val now = nsk(2026, 10, 26, 11, 11)
         val demo = Demo.display(now)
         val tiles = ArrayList<Pair<String, Bitmap>>()
-        for (st in Styles.all) {
+        for (st in Styles.all(context)) {
             val bmp = render(st, demo, 316f, 168f, now)
             save("style_${st.id}", bmp)
             tiles += st.title to bmp
@@ -89,7 +89,7 @@ class ScreenshotTest {
             "Выходной" to nsk(2026, 11, 1, 12, 0),
             "Каникулы" to nsk(2027, 3, 15, 12, 0),
         )
-        for (st in Styles.all) {
+        for (st in Styles.all(context)) {
             val tiles = ArrayList<Pair<String, Bitmap>>()
             for ((label, t) in moments) {
                 val d = DisplayBuilder.build(schedule, "ЭМ-63", null, t).withShortTitles()
@@ -111,10 +111,85 @@ class ScreenshotTest {
         val now = nsk(2026, 10, 26, 12, 30)
         val d = DisplayBuilder.build(em63(), "ЭМ-63", null, now)
         assertEquals(Phase.LESSON, d.phase)
-        for (st in Styles.all) {
+        for (st in Styles.all(context)) {
             val r = renderer.render(st, d, 316f, 168f, RenderMode.WIDGET, nowMillis = now)
             assert(r.bitmap.width > 0 && r.description.contains("Линейная алгебра")) { st.id }
         }
+    }
+
+    /** Каждый стиль на разных размерах виджета — проверка адаптивности. Пропорции между размерами сохранены. */
+    @Test
+    fun adaptiveSizes() {
+        val now = nsk(2026, 10, 26, 12, 30)
+        val d = DisplayBuilder.build(em63(), "ЭМ-63", null, now).withShortTitles()
+        val sizes = listOf(
+            "2×2 мелкий 120×120" to (120f to 120f),
+            "2×2 150×150" to (150f to 150f),
+            "2×2 HyperOS 190×190" to (190f to 190f),
+            "2×4 150×340" to (150f to 340f),
+            "3×2 240×168" to (240f to 168f),
+            "4×1 316×110" to (316f to 110f),
+            "4×2 316×168" to (316f to 168f),
+            "4×2 крупный 360×190" to (360f to 190f),
+            "4×2 ландшафт 520×130" to (520f to 130f),
+            "4×3 330×260" to (330f to 260f),
+            "4×4 316×340" to (316f to 340f),
+            "4×4 350×390" to (350f to 390f),
+            "4×5 340×480" to (340f to 480f),
+            "планшет 600×300" to (600f to 300f),
+        )
+        for (st in Styles.all(context)) {
+            val tiles = sizes.map { (label, wh) -> label to render(st, d, wh.first, wh.second, now, 1.25f) }
+            save("sizes_${st.id}", flow(tiles, 2300))
+        }
+    }
+
+    /** Как было и как стало на растянутом виджете 4×4 (350×390 dp, как на скриншоте пользователя). */
+    @Test
+    fun beforeAfter() {
+        val now = nsk(2026, 10, 26, 12, 30)
+        val d = DisplayBuilder.build(em63(), "ЭМ-63", null, now).withShortTitles()
+        val legacy = io.github.hungrycube.lessonwidget.legacy.WidgetRenderer(context)
+        val tiles = ArrayList<Pair<String, Bitmap>>()
+        for (st in Styles.all(context)) {
+            val old = io.github.hungrycube.lessonwidget.legacy.Styles.all.first { it.id == st.id }
+            tiles += "${st.title}: было" to legacy.render(
+                old, d, 350f, 390f, io.github.hungrycube.lessonwidget.legacy.RenderMode.PREVIEW,
+                nowMillis = now, density = 1f, dynamicColor = false,
+            ).bitmap
+            tiles += "${st.title}: стало" to render(st, d, 350f, 390f, now, 1f)
+        }
+        save("before_after_4x4", flow(tiles, 2500))
+    }
+
+    /** Картинки подряд с переносом строк, каждая в своём размере. */
+    private fun flow(tiles: List<Pair<String, Bitmap>>, maxWidth: Int): Bitmap {
+        data class Placed(val label: String, val bmp: Bitmap, val x: Int, val y: Int)
+        val placed = ArrayList<Placed>()
+        var x = 16
+        var y = 16
+        var rowH = 0
+        var width = 0
+        for ((label, bmp) in tiles) {
+            if (x > 16 && x + bmp.width > maxWidth) {
+                x = 16
+                y += rowH + 16
+                rowH = 0
+            }
+            placed += Placed(label, bmp, x, y)
+            x += bmp.width + 16
+            width = maxOf(width, x)
+            rowH = maxOf(rowH, bmp.height + 34)
+        }
+        val sheet = Bitmap.createBitmap(width, y + rowH + 16, Bitmap.Config.ARGB_8888)
+        val c = Canvas(sheet)
+        c.drawColor(Color.rgb(242, 241, 237))
+        val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 20f; color = Color.rgb(26, 26, 26) }
+        for (t in placed) {
+            c.drawText(t.label, t.x.toFloat(), t.y + 22f, p)
+            c.drawBitmap(t.bmp, t.x.toFloat(), t.y + 30f, null)
+        }
+        return sheet
     }
 
     /** Сетка картинок с подписями. */

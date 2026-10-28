@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "neti",
+  "name": "НЭТИ",
+  "order": 90,
+  "layout": "tags",
+  "palette": {
+    "surface": "#FFFFFF",
+    "text": "#111111",
+    "secondary": "#111111",
+    "muted": "#6B6B6B",
+    "accent": "#D0124F",
+    "track": "#ECECEC",
+    "badge": "#F5A800",
+    "tag1": "#00A861",
+    "tag2": "#0C3B33",
+    "tag3": "#1E88E5",
+    "rule": "@text"
+  },
+  "background": {
+    "radius": 18,
+    "layers": [{"type": "solid", "color": "@surface"}]
+  },
+  "typography": {
+    "defaults": {"font": "montserrat"},
+    "header": {"size": 10, "weight": 800, "color": "#FFFFFF"},
+    "title": {"size": 26, "weight": 900, "letterSpacing": -0.02, "lineHeight": 1.05, "color": "@text"},
+    "details": {"size": 9, "weight": 800, "uppercase": true, "color": "#FFFFFF"},
+    "next": {"size": 10, "weight": 800, "letterSpacing": 0.04, "uppercase": true, "color": "@text"},
+    "group": {"size": 11, "weight": 600, "underline": true, "color": "@text"},
+    "unit": {"size": 11, "weight": 700, "color": "@text"},
+    "counter": {"size": 30, "weight": 900, "lineHeight": 1, "tabular": true, "align": "end", "color": "@text"}
+  },
+  "progress": {"type": "line", "height": 5, "radius": 0, "track": "@track", "fill": "@accent"},
+  "flags": {"badgeCounter": false},
+  "strings": {
+    "counterFormat": "{m}",
+    "atTime": "{start}",
+    "badge": "{week} учебная неделя",
+    "tagType": "{type}",
+    "tagRoom": "Ауд. {room}",
+    "tagWhen": "{until}",
+    "tagWhenNextDay": "{dayLabel} в {start}",
+    "tagWhenNone": "{message}",
+    "nextRight": {"parts": ["{nextStart}", "{nextRoom}"], "sep": " | "}
+  },
+  "variants": {
+    "compact": {
+      "typography": {"counter": {"size": 13}, "title": {"size": 19}},
+      "flags": {"badgeCounter": true},
+      "strings": {
+        "counterFormat": "{minutes}",
+        "badge": "{week} нед.",
+        "nextRight": {"parts": ["{nextStart}"], "sep": " | "}
+      }
+    }
+  },
+  "backdrop": {
+    "layers": [
+      {"type": "solid", "color": "#EBE7E2"},
+      {"type": "band", "x": 0.70, "width": 3, "angle": -28, "pivot": [0.78, 0.5], "color": "#D0124F"},
+      {"type": "band", "x": 0.76, "width": 2, "angle": -28, "pivot": [0.78, 0.5], "color": "#D0124F"}
+    ]
+  }
+}

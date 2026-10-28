@@ -56,13 +56,13 @@ fun StylePicker(selected: String, display: (Long) -> WidgetDisplay, onSelect: (S
         value = withContext(Dispatchers.Default) {
             val d = display(now)
             val renderer = WidgetRenderer(context)
-            Styles.all.associate { st ->
+            Styles.all(context).associate { st ->
                 st.id to renderer.render(st, d, 316f, 168f, RenderMode.PREVIEW, nowMillis = now, density = 2f).bitmap.asImageBitmap()
             }
         }
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        for (st in Styles.all) {
+        for (st in Styles.all(context)) {
             val isSelected = st.id == selected
             val shape = RoundedCornerShape(20.dp)
             Column(

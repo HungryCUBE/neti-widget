@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "id": "terminal",
+  "name": "Терминал",
+  "order": 40,
+  "layout": "terminal",
+  "palette": {
+    "surface": "#0A0D0B",
+    "border": "#1F2B23",
+    "text": "#CFF8DA",
+    "secondary": "#8FD9A4",
+    "muted": "#4E6B57",
+    "accent": "#CFF8DA",
+    "track": "#2B3D31",
+    "cursor": "@secondary"
+  },
+  "background": {
+    "radius": 16,
+    "layers": [{"type": "solid", "color": "@surface"}],
+    "border": {"width": 1, "color": "@border"}
+  },
+  "spacing": {"top": 16, "side": 18, "bottom": 16},
+  "typography": {
+    "defaults": {"font": "jetbrains_mono", "lineHeight": 1.6},
+    "header": {"size": 12, "weight": 400, "color": "@muted"},
+    "title": {"size": 15, "weight": 700, "color": "@text"},
+    "tag": {"base": "title", "weight": 400, "color": "@secondary"},
+    "details": {"size": 12, "weight": 400, "color": "@secondary"},
+    "next": {"size": 12, "weight": 400, "color": "@muted"},
+    "counter": {"size": 12, "weight": 400, "lineHeight": 1, "align": "end", "color": "@text"}
+  },
+  "progress": {
+    "type": "text", "glyph": "█", "max": 19, "min": 4, "role": "details",
+    "fill": "@text", "track": "@track", "current": "@secondary"
+  },
+  "agenda": {"marker": "▸"},
+  "strings": {
+    "prompt": "~/{group|lower} $ {cmd}",
+    "cmdSync": "sync",
+    "cmdNow": "now",
+    "cmdNext": "next",
+    "cmdNextDay": "next --day",
+    "titlePrefix": "▸ ",
+    "titleTag": " [{typeShort}]",
+    "titleNone": "{title|lower}",
+    "detailsNone": "{message|lower}",
+    "details": ["{room}", "{start}–{end}"],
+    "detailsNextDay": ["{dayLabel|lower}", "{start}–{end}", "{room}"],
+    "upcomingNote": "# через {duration}",
+    "nextDayNote": "# {message|lower}",
+    "nextLine": {"parts": ["next →", "{nextStart}", "{next}", "[{nextTypeShort}]", "{nextRoom}"], "sep": " "},
+    "nextNoData": "нажми, чтобы обновить",
+    "nextNone": "next → —",
+    "cursor": " ▍"
+  },
+  "backdrop": {"layers": [{"type": "solid", "color": "#121714"}]}
+}

@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Шрифты ищутся по имени из файлов стилей, поэтому сжатие ресурсов не должно их выкидывать. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@font/*" />

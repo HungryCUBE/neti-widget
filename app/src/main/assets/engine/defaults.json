@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "spacing": {"top": 16, "side": 18, "bottom": 14},
+  "strings": {
+    "untilLesson": "до {end}",
+    "untilUpcoming": "в {start}",
+    "atStart": "в {start}",
+    "atTime": "{start}",
+    "prefixLesson": "ещё",
+    "prefixUpcoming": "через",
+    "minutes": "{m} мин",
+    "unitLabel": "мин",
+    "counterFormat": "{minutes}",
+    "lessonNumber": "{num} пара",
+    "nextLeft": "Далее · {next}",
+    "nextRight": ["{nextStart}", "{nextRoom}"],
+    "weekLabel": "{week} неделя",
+    "noMore": "Дальше пар нет",
+    "durationLong": "{h} ч {mm} мин",
+    "durationShort": "{min} мин",
+    "detailsNone": "{message}",
+    "details": ["{room}", "{until}"],
+    "detailsNextDay": ["{room}", "{type}"],
+    "phaseLesson": "Идёт пара",
+    "phaseBreak": "Перемена",
+    "phaseWindow": "Окно",
+    "phaseBeforeFirst": "Скоро пара",
+    "phaseDayOver": "Пары закончились",
+    "phaseDayOff": "Выходной",
+    "phaseNoLessons": "Пар нет",
+    "phaseNoData": "Нет данных",
+    "progressPercent": " {percent}%",
+    "agendaHeader": "{dayLabel} · {pairs}",
+    "pairs": {"one": "{n} пара", "few": "{n} пары", "many": "{n} пар"},
+    "agendaRow": ["{title}", "{typeShort}"],
+    "agendaTitle": "{title}",
+    "agendaSub": ["{type}", "{room}", "{subgroup}"],
+    "agendaMore": {"one": "и ещё {n} пара", "few": "и ещё {n} пары", "many": "и ещё {n} пар"}
+  },
+  "icons": {
+    "color": "#FFFFFF",
+    "slots": {"lesson": "book", "break": "coffee", "day": "calendar"},
+    "byType": {"лаб": "flask", "пр": "pencil"}
+  },
+  "variants": {
+    "compact": {"strings": {"nextRight": ["{nextStart}"]}}
+  }
+}

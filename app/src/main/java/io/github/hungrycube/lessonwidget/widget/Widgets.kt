@@ -33,7 +33,7 @@ object Widgets {
         val settings = Settings(context)
         val cfg = WidgetConfigs(context).get(appWidgetId)
         val group = cfg?.group ?: settings.defaultGroup
-        val style = Styles.byId(cfg?.style ?: settings.defaultStyle)
+        val style = Styles.byId(context, cfg?.style ?: settings.defaultStyle)
         val subgroup = (cfg?.subgroup ?: settings.subgroup).takeIf { it > 0 }
         val display = displayFor(context, group, subgroup, nowMillis, settings.shortTitles)
         return WidgetState(appWidgetId, group, style, subgroup, display)

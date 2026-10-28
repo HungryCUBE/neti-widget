@@ -2,47 +2,62 @@ package io.github.hungrycube.lessonwidget.render
 
 import android.content.Context
 import android.graphics.Typeface
-import androidx.annotation.FontRes
 import androidx.core.content.res.ResourcesCompat
 import io.github.hungrycube.lessonwidget.R
+import java.io.File
 
-/** Шрифты из Google Fonts (лицензия OFL), лежат в res/font. Все — вариативные, жирность задаётся осью wght. */
-enum class AppFont(@FontRes val res: Int) {
-    MANROPE(R.font.manrope),
-    INTER_TIGHT(R.font.inter_tight),
-    JETBRAINS_MONO(R.font.jetbrains_mono),
-    ROBOTO_FLEX(R.font.roboto_flex),
-    LORA(R.font.lora),
-    LORA_ITALIC(R.font.lora_italic),
-    DOTO(R.font.doto),
-    MONTSERRAT(R.font.montserrat),
+/** Загруженный шрифт. [system] — системный: жирность задаётся стилем Typeface, а не осью wght. */
+class LoadedFont(val typeface: Typeface, val system: Boolean)
 
-    /** Системный шрифт — для Win95 (Tahoma в Android нет). */
-    SYSTEM(0),
-}
-
+/**
+ * Шрифты по имени из файла стиля. Ищутся по порядку: res/font/<имя>.ttf, assets/fonts/<имя>.ttf|otf,
+ * папка fonts рядом с импортированными стилями. «system», «serif», «monospace» и неизвестные имена —
+ * системные шрифты. Шрифты из Google Fonts (OFL) вариативные, жирность задаётся осью wght.
+ */
 object FontCache {
-    private val cache = HashMap<AppFont, Typeface>()
+    const val SYSTEM = "system"
 
-    fun get(context: Context, font: AppFont): Typeface = synchronized(cache) {
-        cache.getOrPut(font) {
-            if (font.res == 0) {
-                Typeface.SANS_SERIF
-            } else {
-                runCatching { ResourcesCompat.getFont(context, font.res) }.getOrNull() ?: Typeface.DEFAULT
+    private val systemFonts = mapOf(
+        SYSTEM to Typeface.SANS_SERIF,
+        "serif" to Typeface.SERIF,
+        "monospace" to Typeface.MONOSPACE,
+    )
+    private val cache = HashMap<String, LoadedFont>()
+
+    /** Папки со шрифтами импортированных стилей. */
+    @Volatile
+    var extraDirs: List<File> = emptyList()
+
+    fun get(context: Context, name: String): LoadedFont = synchronized(cache) {
+        cache.getOrPut(name) { load(context, name) ?: LoadedFont(systemFonts[name] ?: Typeface.SANS_SERIF, true) }
+    }
+
+    /** Есть ли такой шрифт (системные имена тоже считаются). */
+    fun exists(context: Context, name: String): Boolean = name in systemFonts || get(context, name).let { !it.system }
+
+    private fun load(context: Context, name: String): LoadedFont? {
+        if (name in systemFonts || !name.matches(Regex("[a-z0-9_]+"))) return null
+        val res = context.resources
+        val id = res.getIdentifier(name, "font", context.packageName).takeIf { it != 0 }
+            ?: res.getIdentifier(name, "font", R::class.java.name.substringBeforeLast('.')).takeIf { it != 0 }
+        if (id != null) {
+            runCatching { ResourcesCompat.getFont(context, id) }.getOrNull()?.let { return LoadedFont(it, false) }
+        }
+        val assets = runCatching { context.assets.list("fonts")?.toSet() }.getOrNull().orEmpty()
+        for (ext in listOf("ttf", "otf")) {
+            if ("$name.$ext" in assets) {
+                runCatching { Typeface.createFromAsset(context.assets, "fonts/$name.$ext") }.getOrNull()?.let { return LoadedFont(it, false) }
             }
         }
+        for (dir in extraDirs) {
+            for (ext in listOf("ttf", "otf")) {
+                val file = File(dir, "$name.$ext")
+                if (file.isFile) runCatching { Typeface.createFromFile(file) }.getOrNull()?.let { return LoadedFont(it, false) }
+            }
+        }
+        return null
     }
-}
 
-/** Шрифт, жирность и выравнивание цифр обратного отсчёта в стиле. */
-enum class CountdownLayout(val font: AppFont, val weight: Int, val align: Align) {
-    MANROPE_END(AppFont.MANROPE, 600, Align.END),
-    INTER_TIGHT_END(AppFont.INTER_TIGHT, 600, Align.END),
-    INTER_TIGHT_CENTER(AppFont.INTER_TIGHT, 600, Align.CENTER),
-    ROBOTO_FLEX_END(AppFont.ROBOTO_FLEX, 600, Align.END),
-    DOTO_START(AppFont.DOTO, 900, Align.START),
-    MONTSERRAT_END(AppFont.MONTSERRAT, 900, Align.END);
-
-    fun typo(size: Float) = Typo(font, size, weight, lineHeight = 1f, tabular = true)
+    /** Сбросить кэш, например после импорта стиля со своим шрифтом. */
+    fun clear() = synchronized(cache) { cache.clear() }
 }

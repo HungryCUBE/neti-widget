@@ -5,18 +5,28 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Shader
 import android.graphics.Typeface
 import android.text.TextPaint
 
-/** Текстовый стиль в dp. [tracking] — межбуквенный интервал в em, как letter-spacing в макете. */
+/** Тень под текстом или под заливкой. */
+data class TextShadow(val color: Int, val blur: Float, val dx: Float, val dy: Float)
+
+/**
+ * Текстовый стиль в dp. [font] — имя шрифта (см. [FontCache]), [tracking] — межбуквенный интервал в em,
+ * как letter-spacing в макете. [fill] — градиент вместо цвета.
+ */
 data class Typo(
-    val font: AppFont,
+    val font: String,
     val size: Float,
     val weight: Int = 400,
     val tracking: Float = 0f,
     val lineHeight: Float = 1.25f,
     val tabular: Boolean = false,
     val caps: Boolean = false,
+    val shadow: TextShadow? = null,
+    val fill: Gradient? = null,
+    val underline: Boolean = false,
 ) {
     fun sized(newSize: Float) = copy(size = newSize)
     fun weighted(newWeight: Int) = copy(weight = newWeight)
@@ -39,25 +49,30 @@ class Painter(private val context: Context, val canvas: Canvas) {
     val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
 
-    /** Тень под текстом (для стиля «Стекло» поверх обоев). */
-    var textShadowColor: Int = 0
-
     fun paint(t: Typo, color: Int, size: Float = t.size): TextPaint {
         tp.reset()
         tp.flags = Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG
-        val base = FontCache.get(context, t.font)
-        if (t.font == AppFont.SYSTEM) {
-            tp.typeface = Typeface.create(base, if (t.weight >= 600) Typeface.BOLD else Typeface.NORMAL)
+        val font = FontCache.get(context, t.font)
+        if (font.system) {
+            tp.typeface = Typeface.create(font.typeface, if (t.weight >= 600) Typeface.BOLD else Typeface.NORMAL)
         } else {
-            tp.typeface = base
+            tp.typeface = font.typeface
             tp.setFontVariationSettings("'wght' ${t.weight}")
         }
         tp.textSize = size
         tp.color = color
         tp.letterSpacing = t.tracking
         tp.fontFeatureSettings = if (t.tabular) "tnum" else null
-        if (textShadowColor != 0) tp.setShadowLayer(2.5f, 0f, 0.8f, textShadowColor) else tp.clearShadowLayer()
+        val sh = t.shadow
+        if (sh != null) tp.setShadowLayer(sh.blur, sh.dx, sh.dy, sh.color) else tp.clearShadowLayer()
         return tp
+    }
+
+    /** Градиентная заливка текста по прямоугольнику строки. */
+    private fun applyFill(p: TextPaint, t: Typo, left: Float, top: Float, w: Float, h: Float) {
+        val fill = t.fill ?: return
+        p.color = fill.paintAlpha shl 24
+        p.shader = fill.shader(left, top, left + w, top + h)
     }
 
     private fun prepare(text: String, t: Typo) = if (t.caps) text.uppercase() else text
@@ -103,7 +118,7 @@ class Painter(private val context: Context, val canvas: Canvas) {
         if (text.isEmpty()) return 0f
         val s = if (maxWidth < Float.MAX_VALUE) ellipsize(text, t, maxWidth, size) else prepare(text, t)
         val p = paint(t, color, size)
-        p.isUnderlineText = underline
+        p.isUnderlineText = underline || t.underline
         val w = p.measureText(s)
         val fm = p.fontMetrics
         val lh = lineHeight(t, size)
@@ -113,6 +128,7 @@ class Painter(private val context: Context, val canvas: Canvas) {
             Align.END -> x - w
             Align.CENTER -> x - w / 2f
         }
+        applyFill(p, t, left, top, w, lh)
         canvas.drawText(s, left, baseline, p)
         return w
     }
@@ -128,11 +144,16 @@ class Painter(private val context: Context, val canvas: Canvas) {
     fun textAtBaseline(text: String, x: Float, baseline: Float, t: Typo, color: Int, align: Align = Align.START, size: Float = t.size): Float {
         val s = prepare(text, t)
         val p = paint(t, color, size)
+        p.isUnderlineText = t.underline
         val w = p.measureText(s)
         val left = when (align) {
             Align.START -> x
             Align.END -> x - w
             Align.CENTER -> x - w / 2f
+        }
+        if (t.fill != null) {
+            val fm = p.fontMetrics
+            applyFill(p, t, left, baseline + fm.ascent, w, fm.descent - fm.ascent)
         }
         canvas.drawText(s, left, baseline, p)
         return w
@@ -207,12 +228,14 @@ class Painter(private val context: Context, val canvas: Canvas) {
         canvas.drawRoundRect(RectF(l, t, r, b), radius, radius, fill)
     }
 
-    fun roundRectStroke(l: Float, t: Float, r: Float, b: Float, radius: Float, color: Int, width: Float = 1f) {
-        stroke.shader = null
+    /** Обводка внутри прямоугольника. [shader] — градиент вместо цвета (тогда от [color] берётся только прозрачность). */
+    fun roundRectStroke(l: Float, t: Float, r: Float, b: Float, radius: Float, color: Int, width: Float = 1f, shader: Shader? = null) {
+        stroke.shader = shader
         stroke.color = color
         stroke.strokeWidth = width
         val h = width / 2f
         canvas.drawRoundRect(RectF(l + h, t + h, r - h, b - h), radius - h, radius - h, stroke)
+        stroke.shader = null
     }
 
     fun circle(cx: Float, cy: Float, r: Float, color: Int) {
