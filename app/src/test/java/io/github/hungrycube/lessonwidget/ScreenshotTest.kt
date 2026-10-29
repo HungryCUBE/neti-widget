@@ -3,12 +3,10 @@ package io.github.hungrycube.lessonwidget
 import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.RadialGradient
-import android.graphics.Shader
 import androidx.test.core.app.ApplicationProvider
 import io.github.hungrycube.lessonwidget.core.display.DisplayBuilder
 import io.github.hungrycube.lessonwidget.core.display.Phase
@@ -67,13 +65,21 @@ class ScreenshotTest {
         File(out, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
-    // Стиль со своим фото на всех состояниях и размерах — с тестовым закатом, а не с примером из файла.
-    private val sunsetCustom by lazy { StyleCustom(photo = PhotoInput(testPhoto(false))) }
+    /** Фото из samples/photos: снимки автора, уже уменьшенные, как это делает приложение. */
+    private fun photo(name: String): PhotoInput {
+        val dir = File(System.getProperty("samples.dir") ?: "../samples", "photos")
+        return PhotoInput(BitmapFactory.decodeFile(File(dir, name).path) ?: error("нет фото $name"))
+    }
 
-    private fun render(st: WidgetStyle, d: WidgetDisplay, w: Float, h: Float, now: Long, density: Float = 2f) =
+    private val nightCity by lazy { photo("night_city.jpg") }
+    private val riverSunset by lazy { photo("river_sunset.jpg") }
+    private val fieldLight by lazy { photo("field_light.jpg") }
+
+    // Стиль со своим фото во всех состояниях и размерах — с настоящим снимком, а не с примером из файла.
+    private fun render(st: WidgetStyle, d: WidgetDisplay, w: Float, h: Float, now: Long, density: Float = 2f, custom: StyleCustom? = null) =
         renderer.render(
             st, d, w, h, RenderMode.PREVIEW, nowMillis = now, density = density, dynamicColor = false,
-            custom = sunsetCustom.takeIf { st.usesPhoto },
+            custom = custom ?: StyleCustom(photo = nightCity).takeIf { st.usesPhoto },
         ).bitmap
 
     @Test
@@ -84,45 +90,13 @@ class ScreenshotTest {
         for (st in Styles.all(context)) {
             val bmp = render(st, demo, 316f, 168f, now)
             save("style_${st.id}", bmp)
-            // В общую картинку для README стиль со своим фото не идёт: без фото там только пример-заглушка.
-            if (!st.usesPhoto) tiles += st.title to bmp
+            tiles += st.title to bmp
         }
         save("overview", sheet(tiles, columns = 3))
-    }
-
-    /** Тестовое «фото»: закат (тёмный низ — светлый текст) или снег (светлый — тёмный текст). */
-    private fun testPhoto(snow: Boolean): Bitmap {
-        val b = Bitmap.createBitmap(1200, 800, Bitmap.Config.ARGB_8888)
-        val c = Canvas(b)
-        val p = Paint(Paint.ANTI_ALIAS_FLAG)
-        if (snow) {
-            p.shader = LinearGradient(
-                0f, 0f, 0f, 800f, intArrayOf(0xFFBCD3EC.toInt(), 0xFFE3EDF8.toInt(), 0xFFFFFFFF.toInt(), 0xFFF6F8FB.toInt()),
-                floatArrayOf(0f, 0.5f, 0.58f, 1f), Shader.TileMode.CLAMP,
-            )
-            c.drawRect(0f, 0f, 1200f, 800f, p)
-            p.shader = null
-            p.color = 0xFF46555C.toInt()
-            c.drawRect(0f, 416f, 1200f, 456f, p)
-            p.color = Color.WHITE
-            c.drawOval(140f, 560f, 820f, 760f, p)
-        } else {
-            p.shader = LinearGradient(
-                0f, 0f, 0f, 800f,
-                intArrayOf(
-                    0xFF3B2A6B.toInt(), 0xFF9A3F78.toInt(), 0xFFE2755F.toInt(), 0xFFFFBF7A.toInt(),
-                    0xFF3A3F74.toInt(), 0xFF22295A.toInt(), 0xFF10163A.toInt(),
-                ),
-                floatArrayOf(0f, 0.26f, 0.46f, 0.56f, 0.565f, 0.72f, 1f), Shader.TileMode.CLAMP,
-            )
-            c.drawRect(0f, 0f, 1200f, 800f, p)
-            p.shader = RadialGradient(
-                770f, 450f, 160f, intArrayOf(0xFFFFF6D0.toInt(), 0xFFFFD27A.toInt(), 0x80FFAA5A.toInt(), 0x00FFAA5A),
-                floatArrayOf(0f, 0.2f, 0.45f, 1f), Shader.TileMode.CLAMP,
-            )
-            c.drawRect(0f, 0f, 1200f, 800f, p)
-        }
-        return b
+        // «Своё фото» для README: другие снимки и подложки.
+        val ph = Styles.byId(context, "photo")
+        save("style_photo_glass", render(ph, demo, 316f, 168f, now, custom = StyleCustom(mapOf("backing" to "glass"), riverSunset)))
+        save("style_photo_light", render(ph, demo, 316f, 168f, now, custom = StyleCustom(photo = fieldLight)))
     }
 
     /** Новые стили как на макетах: обои трёх видов, своё фото на всех подложках, вид на рабочем столе. */
@@ -142,17 +116,17 @@ class ScreenshotTest {
         tiles += "Обои: жёлтые" to shot(wp, wallpaper = listOf(0xFFE0C020.toInt(), null, null))
 
         val ph = Styles.byId(context, "photo")
-        val sunset = PhotoInput(testPhoto(false))
-        val snow = PhotoInput(testPhoto(true), focusY = 0.6f)
         tiles += "Фото: пример без фото" to shot(ph)
         for (backing in listOf("gradient", "glass", "none")) {
-            tiles += "Фото: $backing, закат" to shot(ph, custom = StyleCustom(mapOf("backing" to backing), sunset))
-            tiles += "Фото: $backing, снег" to shot(ph, custom = StyleCustom(mapOf("backing" to backing), snow))
+            tiles += "Фото: $backing, город" to shot(ph, custom = StyleCustom(mapOf("backing" to backing), nightCity))
+            tiles += "Фото: $backing, закат" to shot(ph, custom = StyleCustom(mapOf("backing" to backing), riverSunset))
+            tiles += "Фото: $backing, поле" to shot(ph, custom = StyleCustom(mapOf("backing" to backing), fieldLight))
         }
-        tiles += "Фото: размытие 60, без акцента" to shot(ph, custom = StyleCustom(mapOf("blur" to "60", "accent" to "off"), sunset))
-        tiles += "Фото: тёмный текст, отражено" to
-            shot(ph, custom = StyleCustom(mapOf("text" to "dark", "dim" to "80"), PhotoInput(testPhoto(false), flip = true)))
-        tiles += "Фото: стекло на рабочем столе" to shot(ph, RenderMode.WIDGET, StyleCustom(mapOf("backing" to "glass"), sunset))
+        tiles += "Фото: размытие 60, без акцента" to shot(ph, custom = StyleCustom(mapOf("blur" to "60", "accent" to "off"), nightCity))
+        tiles += "Фото: светлый текст, затемнение 80" to shot(ph, custom = StyleCustom(mapOf("text" to "light", "dim" to "80"), fieldLight))
+        tiles += "Фото: отражено, кадр вправо" to
+            shot(ph, custom = StyleCustom(photo = PhotoInput(riverSunset.bitmap, focusX = 1f, flip = true)))
+        tiles += "Фото: стекло на рабочем столе" to shot(ph, RenderMode.WIDGET, StyleCustom(mapOf("backing" to "glass"), nightCity))
         for (id in listOf("frutiger", "y2k")) {
             val st = Styles.byId(context, id)
             tiles += st.title to shot(st)
