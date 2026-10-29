@@ -52,16 +52,31 @@ class PhotoInput(val bitmap: Bitmap, val focusX: Float = 0.5f, val focusY: Float
     /** Самый заметный яркий цвет — для «Акцента из фото». */
     val accent: Int? by lazy { palette?.let { it.vibrantSwatch ?: it.lightVibrantSwatch ?: it.darkVibrantSwatch ?: it.dominantSwatch }?.rgb }
 
-    /** Средний цвет нижней половины кадра, где обычно лежит текст. */
-    fun under(aspect: Float): Int? = runCatching {
+    /**
+     * Цвет части кадра от доли высоты [fromY] до [toY]: пиксель, темнее которого доля [q] этой части.
+     * Не среднее: яркое небо и тёмные перила вместе дают обманчивую «середину», а читаемость решают крайние части.
+     */
+    private fun quantile(aspect: Float, fromY: Float, toY: Float, q: Float): Int? = runCatching {
         val c = crop(aspect)
         val k = small.width.toFloat() / bitmap.width
         val l = (c.left * k).toInt().coerceIn(0, small.width - 1)
         val r = (c.right * k).toInt().coerceIn(l + 1, small.width)
-        val top = ((c.top + c.height() / 2f) * k).toInt().coerceIn(0, small.height - 1)
-        val b = (c.bottom * k).toInt().coerceIn(top + 1, small.height)
-        ColorMath.average(Bitmap.createBitmap(small, l, top, r - l, b - top))
+        val t = ((c.top + c.height() * fromY) * k).toInt().coerceIn(0, small.height - 1)
+        val b = ((c.top + c.height() * toY) * k).toInt().coerceIn(t + 1, small.height)
+        val px = IntArray((r - l) * (b - t))
+        small.getPixels(px, 0, r - l, l, t, r - l, b - t)
+        val sorted = px.sortedBy { ColorMath.luminance(it) }
+        sorted[((sorted.size - 1) * q).roundToInt()] or 0xFF000000.toInt()
     }.getOrNull()
+
+    /** Тёмная четверть нижней половины кадра (под текстом): если светлая и она — нужен тёмный текст. */
+    fun under(aspect: Float): Int? = quantile(aspect, 0.5f, 1f, 0.25f)
+
+    /** Светлая часть нижней половины кадра: по ней подбирается подложка под светлый текст. */
+    fun underBright(aspect: Float): Int? = quantile(aspect, 0.5f, 1f, 0.8f)
+
+    /** Светлая часть верха кадра, где шапка. */
+    fun topBright(aspect: Float): Int? = quantile(aspect, 0f, 0.3f, 0.8f)
 }
 
 /** Гауссово размытие картинки тремя проходами «коробочного» фильтра, с учётом прозрачности. */

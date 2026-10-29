@@ -58,7 +58,10 @@ class ColorSources(
         }
     }
 
-    /** Цвета своего фото: dominant, light, dark, accent (главный яркий цвет), under (средний цвет нижней половины кадра — под текстом). */
+    /**
+     * Цвета своего фото: dominant, light, dark, accent (главный яркий цвет), under (тёмная четверть нижней половины
+     * кадра — под текстом), underBright (её светлая часть), topBright (светлая часть верха кадра, где шапка).
+     */
     fun photo(name: String): Int? {
         val ph = photo ?: return null
         val c = ph.dominant ?: return null
@@ -68,6 +71,8 @@ class ColorSources(
             "dark" -> ColorMath.mix(c, Color.BLACK, 0.55f)
             "accent" -> ph.accent ?: c
             "under" -> ph.under(aspect) ?: c
+            "underBright" -> ph.underBright(aspect) ?: c
+            "topBright" -> ph.topBright(aspect) ?: c
             else -> null
         }
     }
@@ -149,6 +154,14 @@ object ColorMath {
         return out
     }
 
+    /** Подложка [tint] поверх [over] плотнее (до 0.9), пока [text] на ней не читается с контрастом [ratio]. */
+    fun veil(tint: Int, over: Int, text: Int, ratio: Float): Int {
+        val opaque = tint or 0xFF000000.toInt()
+        var a = (tint ushr 24) / 255f
+        while (a < 0.9f && contrast(text, mix(over or 0xFF000000.toInt(), opaque, a)) < ratio) a = (a + 0.02f).coerceAtMost(0.9f)
+        return ((a * 255f).roundToInt() shl 24) or (tint and 0xFFFFFF)
+    }
+
     /** Тон фона: light — светлый (нужен тёмный текст), vivid — яркий насыщенный, dark — тёмный. */
     fun tone(c: Int): String {
         val hsl = toHsl(c)
@@ -171,17 +184,20 @@ object ColorMath {
  * - hsl(цвет, h: 30, dh: -4, s: 0.5, l: >0.6) — задать оттенок (h) или сдвинуть его (dh), насыщенность и светлоту:
  *   число — задать, ">x" — не меньше, "<x" — не больше, "*x" — умножить;
  * - mix(цвет, цвет, 0.3) — смешать (0 — первый, 1 — второй);
- * - contrast(цвет, against: цвет, min: 4.5) — осветлить или затемнить, пока контраст с against не станет не меньше min.
+ * - contrast(цвет, against: цвет, min: 4.5) — осветлить или затемнить, пока контраст с against не станет не меньше min;
+ * - veil(подложка, over: фон, text: цвет текста, min: 4.5) — сделать полупрозрачную подложку плотнее, пока текст
+ *   на ней поверх фона не станет читаться с контрастом min (не плотнее 0.9). Если и так читается — подложка как есть.
  * Если цвет внутри функции недоступен, недоступна вся функция — берётся следующий вариант после «|».
  */
 object ColorExpr {
     private val DYNAMIC = Regex("(accent[123]|neutral[12])_(0|10|50|100|200|300|400|500|600|700|800|900|1000)")
     private val WALLPAPER = setOf("primary", "secondary", "tertiary")
-    private val PHOTO = setOf("dominant", "light", "dark", "accent", "under")
+    private val PHOTO = setOf("dominant", "light", "dark", "accent", "under", "underBright", "topBright")
     private val FUNCTIONS = mapOf(
         "hsl" to setOf("h", "dh", "s", "l"),
         "mix" to emptySet(),
         "contrast" to setOf("against", "min"),
+        "veil" to setOf("over", "text", "min"),
     )
 
     // ---------- Разбор ----------
@@ -341,12 +357,15 @@ object ColorExpr {
         val ok = when (f.name) {
             "hsl" -> positional.size == 1 && positional[0].color != null && f.args.filter { it.key != null }.all { it.number != null }
             "mix" -> positional.size == 3 && positional[0].color != null && positional[1].color != null && positional[2].number != null
+            "veil" -> positional.size == 1 && positional[0].color != null && f.args.any { it.key == "over" && it.color != null } &&
+                f.args.any { it.key == "text" && it.color != null }
             else -> positional.size == 1 && positional[0].color != null &&
                 f.args.any { it.key == "against" && it.color != null } && f.args.any { it.key == "min" && it.number != null }
         }
         return if (ok) null else when (f.name) {
             "hsl" -> "hsl(цвет, h: 30, dh: -4, s: 0.5, l: >0.6) — первым идёт цвет, дальше числа"
             "mix" -> "mix(цвет, цвет, доля)"
+            "veil" -> "veil(подложка, over: фон, text: цвет текста, min: 4.5)"
             else -> "contrast(цвет, against: цвет, min: 4.5)"
         }
     }
@@ -403,6 +422,11 @@ object ColorExpr {
             "mix" -> {
                 val second = positional.getOrNull(1)?.color?.let { eval(it, palette, sources) } ?: return null
                 ColorMath.mix(first, second, (positional.getOrNull(2)?.number ?: 0.5f).coerceIn(0f, 1f))
+            }
+            "veil" -> {
+                val over = named("over")?.color?.let { eval(it, palette, sources) } ?: return null
+                val text = named("text")?.color?.let { eval(it, palette, sources) } ?: return null
+                ColorMath.veil(first, over, text, named("min")?.number ?: 4.5f)
             }
             else -> {
                 val against = named("against")?.color?.let { eval(it, palette, sources) } ?: return null

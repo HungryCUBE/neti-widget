@@ -26,9 +26,9 @@
   },
   "palette": {
     "tint": "hsl(@photo.dominant, s: <0.64, l: 0.086) | #100824",
-    "scrimBottom": "@tint/66%",
-    "scrimMid": "@tint/30%",
-    "scrimTop": "@tint/32%",
+    "scrimBottom": "veil(@tint/66%, over: @photo.underBright, text: @text, min: 4.5) | @tint/66%",
+    "scrimMid": "veil(@tint/30%, over: @photo.underBright, text: @text, min: 3) | @tint/30%",
+    "scrimTop": "veil(@tint/32%, over: @photo.topBright, text: @text, min: 4.5) | @tint/32%",
     "scrimFlat": "@tint/25%",
     "text": "#FFFFFF",
     "secondary": "#FFFFFF/84%",
@@ -37,10 +37,11 @@
     "photoAccent": "hsl(@photo.accent, l: >0.62) | @accent",
     "track": "#FFFFFF/30%",
     "chip": "#FFFFFF/22%",
-    "glassTint": "hsl(@photo.dominant, s: <0.5, l: 0.16)/30% | #28143C/30%",
+    "glassTint": "veil(hsl(@photo.dominant, s: <0.5, l: 0.16)/30%, over: @photo.underBright, text: @text, min: 4.5) | #28143C/30%",
     "glassEdge": "#FFFFFF/25%",
     "shadowDark": "#000000/35%",
-    "shadowLight": "transparent"
+    "shadowLight": "transparent",
+    "glassTop": "veil(hsl(@photo.dominant, s: <0.5, l: 0.16)/30%, over: @photo.topBright, text: @text, min: 4.5) | #28143C/30%"
   },
   "background": {
     "radius": 28,
@@ -149,9 +150,9 @@
     "tone:light": {
       "palette": {
         "tint": "#FFFFFF",
-        "scrimBottom": "#FFFFFF/72%",
-        "scrimMid": "#FFFFFF/32%",
-        "scrimTop": "#FFFFFF/40%",
+        "scrimBottom": "veil(#FFFFFF/72%, over: @photo.under, text: @text, min: 4.5) | #FFFFFF/72%",
+        "scrimMid": "veil(#FFFFFF/32%, over: @photo.under, text: @text, min: 3) | #FFFFFF/32%",
+        "scrimTop": "veil(#FFFFFF/40%, over: @photo.under, text: @text, min: 4.5) | #FFFFFF/40%",
         "text": "#17212C",
         "secondary": "#17212C/76%",
         "muted": "#17212C/76%",
@@ -159,10 +160,11 @@
         "photoAccent": "hsl(@photo.accent, l: <0.35) | @accent",
         "track": "#17212C/16%",
         "chip": "#FFFFFF/60%",
-        "glassTint": "#FFFFFF/50%",
+        "glassTint": "veil(#FFFFFF/50%, over: @photo.under, text: @text, min: 4.5) | #FFFFFF/50%",
         "glassEdge": "#FFFFFF/70%",
         "shadowDark": "transparent",
-        "shadowLight": "#FFFFFF/60%"
+        "shadowLight": "#FFFFFF/60%",
+        "glassTop": "veil(#FFFFFF/50%, over: @photo.under, text: @text, min: 4.5) | #FFFFFF/50%"
       }
     },
     "backing:glass": {
@@ -201,7 +203,7 @@
           "corners": "999",
           "backdropBlur": 14,
           "saturate": 1.6,
-          "layers": [{"type": "solid", "color": "@glassTint", "opacityFrom": "dim"}],
+          "layers": [{"type": "solid", "color": "@glassTop", "opacityFrom": "dim"}],
           "shadows": [{"spread": 1, "inset": true, "color": "@glassEdge"}]
         },
         "panel": {
@@ -276,9 +278,9 @@
     "text:light": {
       "palette": {
         "tint": "hsl(@photo.dominant, s: <0.64, l: 0.086) | #100824",
-        "scrimBottom": "@tint/66%",
-        "scrimMid": "@tint/30%",
-        "scrimTop": "@tint/32%",
+        "scrimBottom": "veil(@tint/66%, over: @photo.underBright, text: @text, min: 4.5) | @tint/66%",
+        "scrimMid": "veil(@tint/30%, over: @photo.underBright, text: @text, min: 3) | @tint/30%",
+        "scrimTop": "veil(@tint/32%, over: @photo.topBright, text: @text, min: 4.5) | @tint/32%",
         "text": "#FFFFFF",
         "secondary": "#FFFFFF/84%",
         "muted": "#FFFFFF/84%",
@@ -286,18 +288,19 @@
         "photoAccent": "hsl(@photo.accent, l: >0.62) | @accent",
         "track": "#FFFFFF/30%",
         "chip": "#FFFFFF/22%",
-        "glassTint": "hsl(@photo.dominant, s: <0.5, l: 0.16)/30% | #28143C/30%",
+        "glassTint": "veil(hsl(@photo.dominant, s: <0.5, l: 0.16)/30%, over: @photo.underBright, text: @text, min: 4.5) | #28143C/30%",
         "glassEdge": "#FFFFFF/25%",
         "shadowDark": "#000000/35%",
-        "shadowLight": "transparent"
+        "shadowLight": "transparent",
+        "glassTop": "veil(hsl(@photo.dominant, s: <0.5, l: 0.16)/30%, over: @photo.topBright, text: @text, min: 4.5) | #28143C/30%"
       }
     },
     "text:dark": {
       "palette": {
         "tint": "#FFFFFF",
-        "scrimBottom": "#FFFFFF/72%",
-        "scrimMid": "#FFFFFF/32%",
-        "scrimTop": "#FFFFFF/40%",
+        "scrimBottom": "veil(#FFFFFF/72%, over: @photo.under, text: @text, min: 4.5) | #FFFFFF/72%",
+        "scrimMid": "veil(#FFFFFF/32%, over: @photo.under, text: @text, min: 3) | #FFFFFF/32%",
+        "scrimTop": "veil(#FFFFFF/40%, over: @photo.under, text: @text, min: 4.5) | #FFFFFF/40%",
         "text": "#17212C",
         "secondary": "#17212C/76%",
         "muted": "#17212C/76%",
@@ -305,10 +308,11 @@
         "photoAccent": "hsl(@photo.accent, l: <0.35) | @accent",
         "track": "#17212C/16%",
         "chip": "#FFFFFF/60%",
-        "glassTint": "#FFFFFF/50%",
+        "glassTint": "veil(#FFFFFF/50%, over: @photo.under, text: @text, min: 4.5) | #FFFFFF/50%",
         "glassEdge": "#FFFFFF/70%",
         "shadowDark": "transparent",
-        "shadowLight": "#FFFFFF/60%"
+        "shadowLight": "#FFFFFF/60%",
+        "glassTop": "veil(#FFFFFF/50%, over: @photo.under, text: @text, min: 4.5) | #FFFFFF/50%"
       }
     },
     "accent:off": {"progress": {"fill": "@accent"}, "agenda": {"accent": "@accent"}}

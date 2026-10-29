@@ -161,6 +161,10 @@ class ThemeFilesTest {
         assertEquals("light", ColorMath.tone(0xFFF4E6D4.toInt()))
         assertEquals("dark", ColorMath.tone(0xFF0C1122.toInt()))
         assertEquals("vivid", ColorMath.tone(0xFFE8457F.toInt()))
+        // Подложка плотнее, только если текст на ней не читается.
+        val veil = c("veil(#000000/30%, over: #F0F0F0, text: #FFFFFF, min: 4.5)")!!
+        assertTrue((veil ushr 24) > 0x4D)
+        assertEquals(0x4D000000, c("veil(#000000/30%, over: #101010, text: #FFFFFF, min: 4.5)"))
         // Понятные ошибки.
         assertNotNull(ColorExpr.check("hsl(@base, q: 1)", setOf("base")))
         assertNotNull(ColorExpr.check("hsl(@wallpaper.primary, l: 0.5)", emptySet()))
