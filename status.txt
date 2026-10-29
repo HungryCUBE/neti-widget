@@ -1,0 +1,4 @@
+sha: 39bd7f0a12e3246e86853deb6da0e8f105be7f60
+ref: refs/heads/dev
+status: success
+run: https://github.com/HungryCUBE/neti-widget/actions/runs/40822026361
