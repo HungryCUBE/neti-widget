@@ -1,9 +1,13 @@
 package io.github.hungrycube.lessonwidget.render.theme
 
 import io.github.hungrycube.lessonwidget.render.Align
+import io.github.hungrycube.lessonwidget.render.Corners
+import io.github.hungrycube.lessonwidget.render.Dim
 import io.github.hungrycube.lessonwidget.render.FontCache
 import io.github.hungrycube.lessonwidget.render.Gradient
 import io.github.hungrycube.lessonwidget.render.Ink
+import io.github.hungrycube.lessonwidget.render.PhotoInput
+import io.github.hungrycube.lessonwidget.render.Shadow
 import io.github.hungrycube.lessonwidget.render.TextShadow
 import io.github.hungrycube.lessonwidget.render.Typo
 import kotlinx.serialization.SerializationException
@@ -12,6 +16,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlin.math.roundToInt
 
 /** Ошибка в файле стиля. Текст — для человека: файл, поле и что не так. */
 class ThemeException(message: String) : Exception(message)
@@ -34,12 +39,38 @@ object ThemeLoader {
     val SIZES = setOf("compact", "standard", "large")
     val BASE_ROLES = listOf("header", "title", "details", "next", "counter")
     val PROGRESS_TYPES = setOf("line", "thick", "ring", "dots", "blocks", "striped", "glossy", "text")
-    val COUNTER_TYPES = setOf("text", "orb", "ring")
-    val LAYER_TYPES = setOf("solid", "linear", "radial", "mesh", "wallpaperMesh", "image", "photo", "rules", "line", "band")
+    val COUNTER_TYPES = setOf("text", "orb", "ring", "surface")
+    val LAYER_TYPES = setOf("solid", "linear", "radial", "mesh", "wallpaperMesh", "image", "photo", "rules", "line", "band", "shape")
     val HIGHLIGHT_TYPES = setOf("innerStroke", "gloss")
+
+    /** Варианты по тону фона (см. ThemeSpec.tone). */
+    val TONES = listOf("tone:light", "tone:dark", "tone:vivid")
+    val OPTION_TYPES = setOf("choice", "range", "switch")
     private val ALIGNS = setOf("start", "center", "end")
     private val WHEN = setOf("widget", "preview")
     private val FITS = setOf("cover", "contain", "stretch")
+    private val RADIUS_OF = setOf("diagonal", "width", "height", "min", "farthest", "closest")
+    private val COUNTER_UNITS = setOf("none", "inline", "below")
+    private val PLACEMENTS = setOf("inline", "side", "aside", "header")
+
+    /** Варианты, которые дают настройки стиля: "имя:значение" для choice и switch. */
+    fun optionForms(options: Map<String, OptionSpec>): Set<String> = options.flatMap { (name, o) ->
+        when (o.type) {
+            "choice" -> o.values.map { "$name:$it" }
+            "switch" -> listOf("$name:on", "$name:off")
+            else -> emptyList()
+        }
+    }.toSet()
+
+    /** Значения настроек: заданные пользователем, иначе по умолчанию. Неизвестные и неверные пропускаются. */
+    fun optionValues(options: Map<String, OptionSpec>, chosen: Map<String, String>): Map<String, String> = options.mapValues { (name, o) ->
+        val v = chosen[name]
+        when (o.type) {
+            "choice" -> v?.takeIf { it in o.values } ?: o.default ?: o.values.firstOrNull().orEmpty()
+            "switch" -> v?.takeIf { it == "on" || it == "off" } ?: o.default ?: "off"
+            else -> (v?.toFloatOrNull() ?: o.default?.toFloatOrNull() ?: o.min).coerceIn(o.min, o.max).toString()
+        }
+    }
 
     /** Имена, которые можно подставлять в strings. */
     val VARS = setOf(
@@ -76,14 +107,17 @@ object ThemeLoader {
         return JsonObject(out)
     }
 
-    /** Склеивает слои [chain] с вариантами для [forms]. */
+    /**
+     * Склеивает слои [chain] с вариантами для [forms]. Порядок вариантов: сначала формы размера (short, compact, large),
+     * потом остальные (тон, настройки) в том порядке, в каком они переданы.
+     */
     fun compose(chain: List<JsonObject>, forms: Collection<String>): JsonObject {
+        val ordered = FORMS.filter { it in forms } + forms.filter { it !in FORMS }
         var acc = JsonObject(emptyMap())
         for (layer in chain) {
             acc = merge(acc, JsonObject(layer - "variants"))
             val variants = layer["variants"] as? JsonObject ?: continue
-            for (f in FORMS) {
-                if (f !in forms) continue
+            for (f in ordered) {
                 (variants[f] as? JsonObject)?.let { acc = merge(acc, it) }
             }
         }
@@ -123,6 +157,14 @@ object ThemeLoader {
             g.from?.let { if (it.size != 2) err("$path.from", "нужно [x, y]") }
             g.to?.let { if (it.size != 2) err("$path.to", "нужно [x, y]") }
             g.opacity?.let { if (it !in 0f..1f) err("$path.opacity", "от 0 до 1") }
+            if (g.radiusOf !in RADIUS_OF) err("$path.radiusOf", "нужно ${RADIUS_OF.joinToString()}")
+        }
+        val ranges = spec.options.filterValues { it.type == "range" }.keys
+        fun rangeRef(path: String, name: String?) {
+            if (name != null && name !in ranges) err(path, "нет настройки-числа «$name» в options" + if (ranges.isEmpty()) "" else ", есть: ${ranges.joinToString()}")
+        }
+        fun dim(path: String, v: JsonPrimitive?) {
+            if (v != null && Dim.parse(v.content) == null) err(path, "нужно число (dp) или доля «16%»")
         }
         fun ink(path: String, e: JsonElement?) {
             when (e) {
@@ -138,10 +180,19 @@ object ThemeLoader {
             color("$path.color", s.color)
             whenMode(path, s.whenMode)
         }
+        fun boxShadows(path: String, list: List<BoxShadowSpec>) = list.forEachIndexed { i, s ->
+            color("$path[$i].color", s.color)
+            whenMode("$path[$i]", s.whenMode)
+            if (s.blur < 0f) err("$path[$i].blur", "не меньше нуля")
+        }
         fun background(path: String, bg: BackgroundSpec) {
+            bg.corners?.let { c -> Corners.error(c)?.let { err("$path.corners", it) } }
+            boxShadows("$path.shadows", bg.shadows)
+            if (bg.backdropBlur < 0f) err("$path.backdropBlur", "не меньше нуля")
             bg.layers.forEachIndexed { i, l ->
                 val lp = "$path.layers[$i]"
                 whenMode(lp, l.whenMode)
+                rangeRef("$lp.opacityFrom", l.opacityFrom)
                 when (l.type) {
                     "solid", "rules" -> if (l.color == null) err(lp, "нужен color") else color("$lp.color", l.color)
                     "line" -> {
@@ -163,7 +214,24 @@ object ThemeLoader {
                         if (src == null) err(lp, "нужен src") else if (".." in src || src.startsWith("/")) err("$lp.src", "только путь внутри папки стиля")
                         if (l.fit !in FITS) err("$lp.fit", "нужно cover, contain или stretch")
                     }
-                    "photo" -> if (l.fit !in FITS) err("$lp.fit", "нужно cover, contain или stretch")
+                    "photo" -> {
+                        if (l.fit !in FITS) err("$lp.fit", "нужно cover, contain или stretch")
+                        rangeRef("$lp.blurFrom", l.blurFrom)
+                    }
+                    "shape" -> {
+                        l.box?.let { b ->
+                            dim("$lp.box.left", b.left)
+                            dim("$lp.box.top", b.top)
+                            dim("$lp.box.right", b.right)
+                            dim("$lp.box.bottom", b.bottom)
+                            dim("$lp.box.width", b.width)
+                            dim("$lp.box.height", b.height)
+                        }
+                        l.corners?.let { c -> Corners.error(c)?.let { err("$lp.corners", it) } }
+                        ink("$lp.fill", l.fill)
+                        l.surface?.let { background("$lp.surface", it) }
+                        if (l.fill == null && l.surface == null) err(lp, "нужен fill или surface")
+                    }
                     else -> err("$lp.type", "неизвестный слой «${l.type}», есть: ${LAYER_TYPES.joinToString()}")
                 }
             }
@@ -188,6 +256,26 @@ object ThemeLoader {
         paletteCycle(spec.palette)?.let { err("palette", "цвета ссылаются друг на друга по кругу: $it") }
         background("background", spec.background)
         spec.backdrop?.let { background("backdrop", it) }
+        spec.surfaces.forEach { (k, s) -> background("surfaces.$k", s) }
+        color("tone", spec.tone)
+        spec.options.forEach { (name, o) ->
+            val path = "options.$name"
+            if (!name.matches(Regex("[a-zA-Z][a-zA-Z0-9_]*"))) err(path, "имя латиницей, без пробелов")
+            if (o.type !in OPTION_TYPES) err("$path.type", "нужно choice, range или switch")
+            if (o.label.isBlank()) err("$path.label", "нет подписи")
+            when (o.type) {
+                "choice" -> {
+                    if (o.values.size < 2) err("$path.values", "нужно хотя бы два значения")
+                    if (o.default != null && o.default !in o.values) err("$path.default", "нет среди values")
+                }
+                "switch" -> if (o.default != null && o.default != "on" && o.default != "off") err("$path.default", "нужно on или off")
+                "range" -> {
+                    if (o.max <= o.min) err(path, "max должен быть больше min")
+                    val d = o.default?.toFloatOrNull()
+                    if (o.default != null && (d == null || d !in o.min..o.max)) err("$path.default", "число от ${o.min} до ${o.max}")
+                }
+            }
+        }
 
         BASE_ROLES.filter { it !in spec.typography }.forEach { err("typography", "нет роли «$it»") }
         for ((role, t) in spec.typography) {
@@ -195,11 +283,12 @@ object ThemeLoader {
             t.base?.let { if (it !in spec.typography) err("$path.base", "нет роли «$it»") }
             t.size?.let { if (it <= 0f) err("$path.size", "размер должен быть больше нуля") }
             t.weight?.let { if (it !in 1..1000) err("$path.weight", "жирность от 1 до 1000") }
-            t.lineHeight?.let { if (it <= 0f) err("$path.lineHeight", "должна быть больше нуля") }
+            t.lineHeight?.let { if (it < 0f) err("$path.lineHeight", "не меньше нуля (0 — как normal в CSS)") }
             t.align?.let { if (it !in ALIGNS) err("$path.align", "нужно start, center или end") }
             color("$path.color", t.color)
             t.fill?.let { gradient("$path.fill", it) }
             t.textShadow?.let { shadow("$path.textShadow", it) }
+            t.shadows?.let { boxShadows("$path.shadows", it) }
             t.font?.let { if (!fontExists(it)) p.warnings += "$path.font: шрифта «$it» нет ни в res/font, ни в assets/fonts — будет системный" }
         }
         roleCycle(spec.typography)?.let { err("typography", "роли ссылаются друг на друга по кругу: $it") }
@@ -212,11 +301,22 @@ object ThemeLoader {
         pr.glow?.let { shadow("progress.glow", it) }
         if (pr.cap != "butt" && pr.cap != "round") err("progress.cap", "нужно butt или round")
         if (pr.step <= 0f || pr.block <= 0f) err("progress", "step и block должны быть больше нуля")
+        fun surfaceRef(path: String, name: String?) {
+            if (name != null && name !in spec.surfaces) err(path, "нет подложки «$name» в surfaces")
+        }
+        surfaceRef("progress.trackSurface", pr.trackSurface)
+        surfaceRef("progress.fillSurface", pr.fillSurface)
 
         val cn = spec.counter
         if (cn.type !in COUNTER_TYPES) err("counter.type", "неизвестный тип «${cn.type}», есть: ${COUNTER_TYPES.joinToString()}")
         ink("counter.fill", cn.fill)
         color("counter.track", cn.track)
+        surfaceRef("counter.surface", cn.surface)
+        if (cn.type == "surface" && cn.surface == null) err("counter.surface", "для type surface нужна подложка из surfaces")
+        if (cn.unit !in COUNTER_UNITS) err("counter.unit", "нужно ${COUNTER_UNITS.joinToString()}")
+        if (cn.placement !in PLACEMENTS) err("counter.placement", "нужно ${PLACEMENTS.joinToString()}")
+        if (cn.valign != "center" && cn.valign != "end") err("counter.valign", "нужно center или end")
+        if (cn.insets.size > 4) err("counter.insets", "от одного до четырёх чисел, как padding в CSS")
 
         val tplErrors = mutableListOf<String>()
         val tpls = spec.strings.mapNotNull { (k, v) -> Templates.parse(v, "strings.$k", tplErrors)?.let { k to it } }.toMap()
@@ -257,9 +357,36 @@ object ThemeLoader {
         }
         if (a.maxScale < 1f) err("adapt.maxScale", "не меньше 1")
         if (a.minScale !in 0.1f..1f) err("adapt.minScale", "от 0.1 до 1")
-        (spec.variants.keys + rawVariants).filter { it !in FORMS }.toSet()
-            .forEach { err("variants", "неизвестная форма «$it», есть: ${FORMS.joinToString()}") }
+        val known = FORMS + TONES + optionForms(spec.options)
+        (spec.variants.keys + rawVariants).filter { it !in known }.toSet()
+            .forEach { err("variants", "неизвестный вариант «$it», есть: ${known.joinToString()}") }
+        if (spec.tone == null && (spec.variants.keys + rawVariants).any { it in TONES }) err("tone", "варианты tone:… есть, а цвета tone нет")
         return p
+    }
+
+    /** Тон фона стиля по цвету [ThemeSpec.tone]: "tone:light", "tone:dark", "tone:vivid" или null. */
+    fun tone(spec: ThemeSpec, sources: ColorSources): String? {
+        val expr = spec.tone ?: return null
+        val c = PaletteResolver(spec, sources).color(expr) ?: return null
+        return "tone:" + ColorMath.tone(c)
+    }
+
+    /** Цвета палитры по требованию, со ссылками друг на друга. */
+    private class PaletteResolver(private val spec: ThemeSpec, private val sources: ColorSources) {
+        val resolved = HashMap<String, Int>()
+        private val visiting = HashSet<String>()
+
+        fun pal(k: String): Int? {
+            resolved[k]?.let { return it }
+            val expr = spec.palette[k] ?: return null
+            if (!visiting.add(k)) return null
+            val c = ColorExpr.resolve(expr, ::pal, sources)
+            visiting.remove(k)
+            if (c != null) resolved[k] = c
+            return c
+        }
+
+        fun color(expr: String): Int? = ColorExpr.resolve(expr, ::pal, sources)
     }
 
     private fun paletteCycle(palette: Map<String, String>): String? {
@@ -292,26 +419,37 @@ object ThemeLoader {
 
     // ---------- Сборка готовой темы ----------
 
-    /** Готовая тема. [widget] — для рабочего стола (тени и слои с when). */
-    fun resolve(spec: ThemeSpec, sources: ColorSources, assets: ThemeAssets, widget: Boolean): Theme {
-        val resolved = HashMap<String, Int>()
-        val visiting = HashSet<String>()
-        fun pal(k: String): Int? {
-            resolved[k]?.let { return it }
-            val expr = spec.palette[k] ?: return null
-            if (!visiting.add(k)) return null
-            val c = ColorExpr.resolve(expr, ::pal, sources)
-            visiting.remove(k)
-            if (c != null) resolved[k] = c
-            return c
-        }
-        spec.palette.keys.forEach { pal(it) }
-        val palette = Palette(resolved)
+    /**
+     * Готовая тема. [widget] — для рабочего стола (тени и слои с when). [options] — значения настроек стиля
+     * (уже с умолчаниями, см. [optionValues]), [photo] — своё фото виджета для слоя photo.
+     */
+    fun resolve(
+        spec: ThemeSpec,
+        sources: ColorSources,
+        assets: ThemeAssets,
+        widget: Boolean,
+        options: Map<String, String> = emptyMap(),
+        photo: PhotoInput? = null,
+    ): Theme {
+        val pr0 = PaletteResolver(spec, sources)
+        spec.palette.keys.forEach { pr0.pal(it) }
+        val palette = Palette(pr0.resolved)
         val textColor = palette["text"]
-        fun col(expr: String?, default: Int = textColor): Int = expr?.let { ColorExpr.resolve(it, ::pal, sources) } ?: default
+        fun col(expr: String?, default: Int = textColor): Int = expr?.let { pr0.color(it) } ?: default
         fun active(w: String?) = w == null || (w == "widget") == widget
         fun shadow(s: ShadowSpec?): TextShadow? = s?.takeIf { active(it.whenMode) }?.let { TextShadow(col(it.color), it.blur, it.dx, it.dy) }
-        fun gradient(g: GradientSpec): Gradient {
+        fun boxShadows(list: List<BoxShadowSpec>?): List<Shadow> =
+            list.orEmpty().filter { active(it.whenMode) }.map { Shadow(it.dx, it.dy, it.blur, it.spread, col(it.color), it.inset) }
+        // Множитель от настройки-числа: значение / значение по умолчанию.
+        fun factor(name: String?): Float {
+            val o = name?.let { spec.options[it] } ?: return 1f
+            val def = o.default?.toFloatOrNull() ?: o.max
+            val v = options[name]?.toFloatOrNull() ?: def
+            return if (def > 0f) v / def else v / o.max
+        }
+        fun scaled(c: Int, k: Float) = if (k == 1f) c else ((((c ushr 24) * k).roundToInt().coerceIn(0, 255)) shl 24) or (c and 0xFFFFFF)
+        // k — множитель прозрачности каждого цвета (opacityFrom): так затемнение может быть и сильнее, чем в файле.
+        fun gradient(g: GradientSpec, k: Float = 1f): Gradient {
             val positions = if (g.stops.isNotEmpty() && g.stops.all { it.at != null }) FloatArray(g.stops.size) { g.stops[it].at!! } else null
             return Gradient(
                 radial = g.type == "radial",
@@ -319,11 +457,12 @@ object ThemeLoader {
                 from = g.from?.toFloatArray(),
                 to = g.to?.toFloatArray(),
                 center = g.center?.toFloatArray(),
-                radius = g.radius ?: 0.5f,
+                radius = g.radius ?: if (g.radiusOf == "farthest" || g.radiusOf == "closest") 1f else 0.5f,
                 radiusOf = g.radiusOf,
-                colors = IntArray(g.stops.size) { col(g.stops[it].color) },
+                colors = IntArray(g.stops.size) { scaled(col(g.stops[it].color), k) },
                 positions = positions,
                 opacity = g.opacity ?: 1f,
+                ellipse = g.ellipse,
             )
         }
         fun ink(e: JsonElement?, default: String): Ink = when (e) {
@@ -332,32 +471,61 @@ object ThemeLoader {
             else -> Ink(col(default))
         }
         fun alpha(o: Float?) = ((o ?: 1f) * 255f).let { kotlin.math.round(it).toInt() }.coerceIn(0, 255)
-        fun background(bg: BackgroundSpec): BackgroundStyle = BackgroundStyle(
+        fun dim(v: JsonPrimitive?) = v?.let { Dim.parse(it.content) }
+        fun background(bg: BackgroundSpec, extra: Layer? = null): BackgroundStyle = BackgroundStyle(
             radius = bg.radius,
             clip = bg.clip,
-            layers = bg.layers.mapNotNull { l ->
+            layers = listOfNotNull(extra) + bg.layers.mapNotNull { l ->
+                val k = factor(l.opacityFrom)
                 when (l.type) {
-                    "solid" -> Layer.Solid(col(l.color), l.whenMode)
-                    "linear", "radial" -> Layer.Shade(gradient(l.gradient()), l.whenMode)
+                    "solid" -> Layer.Solid(scaled(col(l.color), k), l.whenMode)
+                    "linear", "radial" -> Layer.Shade(gradient(l.gradient(), k), l.whenMode)
                     "mesh", "wallpaperMesh" -> {
                         val pts = l.points.ifEmpty { if (l.type == "wallpaperMesh") WALLPAPER_MESH else emptyList() }
-                        Layer.Mesh(pts.map { MeshPoint(it.x, it.y, it.radius, col(it.color)) }, alpha(l.opacity), l.whenMode)
+                        Layer.Mesh(pts.map { MeshPoint(it.x, it.y, it.radius, col(it.color)) }, alpha((l.opacity ?: 1f) * k), l.whenMode)
                     }
-                    "image" -> l.src?.let { src -> Layer.Image({ assets.image(src) }, l.fit, alpha(l.opacity), l.whenMode) }
-                    "photo" -> Layer.Image({ assets.image(PHOTO_SRC) }, l.fit, alpha(l.opacity), l.whenMode)
+                    "image" -> l.src?.let { src -> Layer.Image({ assets.image(src) }, l.fit, alpha((l.opacity ?: 1f) * k), l.whenMode) }
+                    "photo" -> {
+                        val blur = (l.blur ?: 0f) * if (l.blurFrom != null) {
+                            val o = spec.options[l.blurFrom]
+                            ((options[l.blurFrom]?.toFloatOrNull() ?: o?.default?.toFloatOrNull() ?: 0f) / (o?.max ?: 100f)).coerceIn(0f, 1f)
+                        } else {
+                            1f
+                        }
+                        Layer.Photo(photo, alpha((l.opacity ?: 1f) * k), blur, l.whenMode)
+                    }
                     "rules" -> Layer.Rules(l.offset, l.step, l.width, col(l.color), l.whenMode)
                     "line" -> Layer.Line(l.x, l.y, l.width, col(l.color), l.whenMode)
                     "band" -> Layer.Band(
                         l.x ?: 0f, l.width, l.angle ?: 0f, l.pivot?.getOrNull(0) ?: 0.5f, l.pivot?.getOrNull(1) ?: 0.5f,
                         col(l.color), l.whenMode,
                     )
+                    "shape" -> {
+                        val b = l.box ?: BoxSpec()
+                        val fillLayer = l.fill?.let { f ->
+                            val fi = ink(f, "transparent")
+                            if (fi.gradient != null) {
+                                Layer.Shade(if (f is JsonObject) gradient(json.decodeFromJsonElement(GradientSpec.serializer(), f), k) else fi.gradient, null)
+                            } else {
+                                Layer.Solid(scaled(fi.color, k), null)
+                            }
+                        }
+                        val inner = l.surface ?: BackgroundSpec()
+                        val style = background(inner.copy(corners = l.corners ?: inner.corners), fillLayer)
+                        Layer.Shape(Box(dim(b.left), dim(b.top), dim(b.right), dim(b.bottom), dim(b.width), dim(b.height)), style, l.whenMode)
+                    }
                     else -> null
                 }
             },
             border = bg.border?.let { Border(it.width, ink(it.color, "@border"), it.whenMode) },
             highlights = bg.highlights.map { Highlight(it.type, it.width, it.inset, ink(it.color, "#59FFFFFF"), it.height, it.whenMode) },
             shadow = shadow(bg.shadow),
+            corners = bg.corners?.let { Corners.parse(it) },
+            shadows = boxShadows(bg.shadows),
+            backdropBlur = bg.backdropBlur,
+            saturate = bg.saturate,
         )
+        val surfaces = spec.surfaces.mapValues { background(it.value) }
 
         // Роли текста: своя → base → defaults.
         val defaults = spec.typography["defaults"]
@@ -373,6 +541,7 @@ object ThemeLoader {
                 color = own.color ?: parent.color,
                 fill = own.fill ?: parent.fill,
                 textShadow = own.textShadow ?: parent.textShadow,
+                shadows = own.shadows ?: parent.shadows,
                 uppercase = own.uppercase ?: parent.uppercase,
                 tabular = own.tabular ?: parent.tabular,
                 underline = own.underline ?: parent.underline,
@@ -391,8 +560,9 @@ object ThemeLoader {
                     tabular = t.tabular ?: false,
                     caps = t.uppercase ?: false,
                     shadow = shadow(t.textShadow),
-                    fill = t.fill?.let(::gradient),
+                    fill = t.fill?.let { gradient(it) },
                     underline = t.underline ?: false,
+                    shadows = boxShadows(t.shadows),
                 ),
                 color = col(t.color),
                 align = when (t.align) {
@@ -433,9 +603,34 @@ object ThemeLoader {
             frame = pr.frame,
             glyph = pr.glyph,
             role = pr.role,
+            trackSurface = pr.trackSurface?.let { surfaces[it] },
+            fillSurface = pr.fillSurface?.let { surfaces[it] },
+            fillInset = pr.fillInset,
+            fillClip = pr.fillClip,
         )
         val cn = spec.counter
-        val counter = CounterStyle(cn.type, ink(cn.fill, "@accent"), col(cn.track ?: "@track"), cn.padding, cn.width, cn.gloss)
+        val ins = cn.insets
+        val counter = CounterStyle(
+            type = cn.type,
+            fill = ink(cn.fill, "@accent"),
+            track = col(cn.track ?: "@track"),
+            padding = cn.padding,
+            width = cn.width,
+            gloss = cn.gloss,
+            surface = cn.surface?.let { surfaces[it] },
+            size = cn.size,
+            insets = when (ins.size) {
+                0 -> floatArrayOf(0f, 0f, 0f, 0f)
+                1 -> floatArrayOf(ins[0], ins[0], ins[0], ins[0])
+                2 -> floatArrayOf(ins[0], ins[1], ins[0], ins[1])
+                3 -> floatArrayOf(ins[0], ins[1], ins[2], ins[1])
+                else -> floatArrayOf(ins[0], ins[1], ins[2], ins[3])
+            },
+            unit = cn.unit,
+            unitGap = cn.unitGap,
+            placement = cn.placement,
+            valign = cn.valign,
+        )
 
         val tpls = spec.strings.mapNotNull { (k, v) -> Templates.parse(v, k, mutableListOf())?.let { k to it } }.toMap()
         val icons = IconStyle(col(spec.icons.color), spec.icons.slots, spec.icons.byType, Icons.BUILT_IN + spec.icons.custom)
@@ -469,11 +664,9 @@ object ThemeLoader {
             flags = spec.flags,
             icons = icons,
             agenda = agenda,
+            surfaces = surfaces,
         )
     }
-
-    /** Имя картинки своего фото для слоя photo. */
-    const val PHOTO_SRC = "@photo"
 
     private val WALLPAPER_MESH = listOf(
         MeshPointSpec(0.15f, 0.15f, 0.75f, "@wallpaper.primary | #4B5BFF"),

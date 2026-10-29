@@ -27,6 +27,9 @@ enum class RenderMode {
 
 class Rendered(val bitmap: Bitmap, val description: String)
 
+/** Что у виджета своё, кроме стиля: значения настроек стиля (options) и своё фото. */
+class StyleCustom(val options: Map<String, String> = emptyMap(), val photo: PhotoInput? = null)
+
 /** Рисует виджет целиком в Bitmap. Один код и для рабочего стола, и для превью. */
 class WidgetRenderer(private val context: Context) {
 
@@ -46,6 +49,10 @@ class WidgetRenderer(private val context: Context) {
         dynamicColor: Boolean = true,
         /** Предел размера картинки в пикселях: у виджетов есть лимит на память под картинки. */
         maxPixels: Float = MAX_PIXELS,
+        /** Настройки стиля и своё фото этого виджета. */
+        custom: StyleCustom? = null,
+        /** Подмена цветов обоев (primary, secondary, tertiary) — для скриншотов на разных обоях. */
+        wallpaper: List<Int?>? = null,
     ): Rendered {
         // Размера нет (виджет только что добавили) — стандартный 4×2.
         val sized = widthDp > 0f && heightDp > 0f
@@ -62,12 +69,13 @@ class WidgetRenderer(private val context: Context) {
 
         val canvas = Canvas(bitmap)
         canvas.scale(scale, scale)
-        val painter = Painter(context, canvas)
+        val painter = Painter(context, canvas, bitmap)
         // Прозрачный отступ на рабочем столе (Android 12+ скругляет углы виджетов — Win95 отодвигаем от краёв).
         val inset = if (mode == RenderMode.WIDGET) style.adapt.widgetInset else 0f
         val size = Adaptive.classify(w - 2 * inset, h - 2 * inset, style.adapt, style.sizes)
-        val sources = ColorSources(context, dynamicColor) { PhotoStore.bitmap(context) }
-        val theme = style.theme(size.forms, sources, widget = mode == RenderMode.WIDGET)
+        val photo = custom?.photo
+        val sources = ColorSources(context, dynamicColor, photo, size.width / size.height, wallpaper)
+        val theme = style.theme(size.forms, sources, widget = mode == RenderMode.WIDGET, custom?.options.orEmpty(), photo)
         if (mode == RenderMode.PREVIEW) theme.backdrop?.let { Backgrounds.draw(painter, it, 0f, 0f, totalW, totalH, mode) }
         canvas.translate(margin + inset, margin + inset)
         if (size.scale != 1f) canvas.scale(size.scale, size.scale)

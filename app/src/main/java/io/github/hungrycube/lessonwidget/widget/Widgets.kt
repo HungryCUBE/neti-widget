@@ -9,7 +9,10 @@ import io.github.hungrycube.lessonwidget.core.display.WidgetDisplay
 import io.github.hungrycube.lessonwidget.core.display.withShortTitles
 import io.github.hungrycube.lessonwidget.data.ScheduleRepository
 import io.github.hungrycube.lessonwidget.data.Settings
+import io.github.hungrycube.lessonwidget.data.WidgetConfig
 import io.github.hungrycube.lessonwidget.data.WidgetConfigs
+import io.github.hungrycube.lessonwidget.data.WidgetPhotos
+import io.github.hungrycube.lessonwidget.render.StyleCustom
 import io.github.hungrycube.lessonwidget.render.Styles
 import io.github.hungrycube.lessonwidget.render.WidgetStyle
 
@@ -20,6 +23,8 @@ data class WidgetState(
     val style: WidgetStyle,
     val subgroup: Int?,
     val display: WidgetDisplay,
+    /** Настройки стиля и своё фото. */
+    val custom: StyleCustom? = null,
 )
 
 object Widgets {
@@ -36,7 +41,21 @@ object Widgets {
         val style = Styles.byId(context, cfg?.style ?: settings.defaultStyle)
         val subgroup = (cfg?.subgroup ?: settings.subgroup).takeIf { it > 0 }
         val display = displayFor(context, group, subgroup, nowMillis, settings.shortTitles)
-        return WidgetState(appWidgetId, group, style, subgroup, display)
+        return WidgetState(appWidgetId, group, style, subgroup, display, customFor(context, style, appWidgetId, cfg, settings))
+    }
+
+    /**
+     * Настройки стиля и фото виджета: свои, а если их нет — по умолчанию из настроек приложения
+     * (так новый виджет со «Своим фото» по умолчанию сразу получает это фото).
+     */
+    fun customFor(context: Context, style: WidgetStyle, appWidgetId: Int?, cfg: WidgetConfig?, settings: Settings = Settings(context)): StyleCustom? {
+        if (style.options.isEmpty() && !style.usesPhoto) return null
+        val photo = if (style.usesPhoto) {
+            WidgetPhotos.input(WidgetPhotos.fileFor(context, appWidgetId), cfg?.photo ?: settings.defaultPhoto)
+        } else {
+            null
+        }
+        return StyleCustom(cfg?.options ?: settings.defaultOptions, photo)
     }
 
     fun displayFor(context: Context, group: String?, subgroup: Int?, nowMillis: Long, shortTitles: Boolean): WidgetDisplay {

@@ -28,8 +28,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.hungrycube.lessonwidget.core.display.WidgetDisplay
 import io.github.hungrycube.lessonwidget.render.RenderMode
+import io.github.hungrycube.lessonwidget.render.StyleCustom
 import io.github.hungrycube.lessonwidget.render.Styles
 import io.github.hungrycube.lessonwidget.render.WidgetRenderer
+import io.github.hungrycube.lessonwidget.render.WidgetStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -47,17 +49,27 @@ fun rememberNow(): Long {
     return now
 }
 
-/** Выбор стиля с живым превью — картинки рисует тот же код, что и виджет. */
+/**
+ * Выбор стиля с живым превью — картинки рисует тот же код, что и виджет.
+ * [customFor] — настройки и фото виджета для превью стилей, где они есть; [refresh] — перерисовать превью, когда они изменились.
+ */
 @Composable
-fun StylePicker(selected: String, display: (Long) -> WidgetDisplay, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
+fun StylePicker(
+    selected: String,
+    display: (Long) -> WidgetDisplay,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    customFor: (WidgetStyle) -> StyleCustom? = { null },
+    refresh: Any? = null,
+) {
     val context = LocalContext.current
     val now = rememberNow()
-    val previews by produceState<Map<String, ImageBitmap>>(emptyMap(), now) {
+    val previews by produceState<Map<String, ImageBitmap>>(emptyMap(), now, refresh) {
         value = withContext(Dispatchers.Default) {
             val d = display(now)
             val renderer = WidgetRenderer(context)
             Styles.all(context).associate { st ->
-                st.id to renderer.render(st, d, 316f, 168f, RenderMode.PREVIEW, nowMillis = now, density = 2f).bitmap.asImageBitmap()
+                st.id to renderer.render(st, d, 316f, 168f, RenderMode.PREVIEW, nowMillis = now, density = 2f, custom = customFor(st)).bitmap.asImageBitmap()
             }
         }
     }

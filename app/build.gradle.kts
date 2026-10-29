@@ -104,6 +104,8 @@ dependencies {
     implementation(libs.glance.appwidget)
     implementation(libs.work.runtime)
     implementation(libs.coroutines.android)
+    implementation(libs.palette)
+    implementation(libs.exifinterface)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

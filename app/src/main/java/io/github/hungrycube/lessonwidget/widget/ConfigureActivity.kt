@@ -22,6 +22,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,10 +42,15 @@ import io.github.hungrycube.lessonwidget.data.ScheduleRepository
 import io.github.hungrycube.lessonwidget.data.Settings
 import io.github.hungrycube.lessonwidget.data.WidgetConfig
 import io.github.hungrycube.lessonwidget.data.WidgetConfigs
+import io.github.hungrycube.lessonwidget.data.WidgetPhotos
+import io.github.hungrycube.lessonwidget.render.StyleCustom
+import io.github.hungrycube.lessonwidget.render.Styles
 import io.github.hungrycube.lessonwidget.ui.AppTheme
 import io.github.hungrycube.lessonwidget.ui.GroupPicker
 import io.github.hungrycube.lessonwidget.ui.Section
+import io.github.hungrycube.lessonwidget.ui.StyleDraft
 import io.github.hungrycube.lessonwidget.ui.StylePicker
+import io.github.hungrycube.lessonwidget.ui.StyleSetupScreen
 import io.github.hungrycube.lessonwidget.ui.SubgroupChips
 import io.github.hungrycube.lessonwidget.ui.previewDisplay
 import io.github.hungrycube.lessonwidget.work.RefreshScheduler
@@ -68,13 +74,43 @@ class ConfigureActivity : ComponentActivity() {
             finish()
             return
         }
-        setContent { AppTheme { ConfigureScreen(appWidgetId, onDone = ::save, onCancel = ::finish) } }
+        setContent { AppTheme { ConfigureScreen(appWidgetId, onDone = ::save, onCancel = ::cancel) } }
     }
 
-    private fun save(config: WidgetConfig) {
+    private fun cancel() {
+        // Выбранное, но не сохранённое фото не копится.
+        WidgetPhotos.draft(applicationContext, "$appWidgetId").delete()
+        finish()
+    }
+
+    private fun save(config: WidgetConfig, draft: StyleDraft) {
         val app = applicationContext
         val settings = Settings(app)
-        WidgetConfigs(app).set(appWidgetId, config)
+        val key = "$appWidgetId"
+        val style = Styles.byId(app, config.style ?: settings.defaultStyle)
+        try {
+            if (style.usesPhoto) {
+                val own = WidgetPhotos.file(app, key)
+                val default = WidgetPhotos.file(app, WidgetPhotos.DEFAULT)
+                when {
+                    draft.newPhoto?.isFile == true -> WidgetPhotos.commitDraft(app, key, key)
+                    // Новый виджет со «Своим фото» по умолчанию получает копию этого фото сразу.
+                    !own.isFile && default.isFile -> WidgetPhotos.copy(default, own)
+                }
+            } else {
+                WidgetPhotos.delete(app, key)
+            }
+        } catch (e: Exception) {
+            CrashLog.record(app, "Своё фото виджета $appWidgetId", e)
+        }
+        WidgetPhotos.draft(app, key).delete()
+        WidgetConfigs(app).set(
+            appWidgetId,
+            config.copy(
+                options = draft.options.takeIf { style.options.isNotEmpty() },
+                photo = draft.frame.takeIf { style.usesPhoto },
+            ),
+        )
         if (settings.defaultGroup == null && config.group != null) settings.defaultGroup = config.group
         setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
 
@@ -104,7 +140,7 @@ class ConfigureActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ConfigureScreen(appWidgetId: Int, onDone: (WidgetConfig) -> Unit, onCancel: () -> Unit) {
+private fun ConfigureScreen(appWidgetId: Int, onDone: (WidgetConfig, StyleDraft) -> Unit, onCancel: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { Settings(context) }
     val existing = remember { WidgetConfigs(context).get(appWidgetId) }
@@ -114,6 +150,34 @@ private fun ConfigureScreen(appWidgetId: Int, onDone: (WidgetConfig) -> Unit, on
     var picking by remember { mutableStateOf(appGroup == null && existing?.group == null) }
     var style by remember { mutableStateOf(existing?.style ?: settings.defaultStyle) }
     var subgroup by remember { mutableStateOf(existing?.subgroup) }
+    // Настройки стиля и кадр фото: свои у виджета, а у нового — как по умолчанию в приложении.
+    var draft by remember {
+        mutableStateOf(StyleDraft(existing?.options ?: settings.defaultOptions, existing?.photo ?: settings.defaultPhoto))
+    }
+    var setup by remember { mutableStateOf(false) }
+    val draftFile = remember { WidgetPhotos.draft(context, "$appWidgetId") }
+    val currentPhoto = WidgetPhotos.fileFor(context, appWidgetId)
+    val widgetSize = remember { widgetSizeDp(context, appWidgetId) }
+
+    if (setup) {
+        val st = Styles.byId(context, style)
+        val g = if (useAppGroup) appGroup else ownGroup
+        StyleSetupScreen(
+            style = st,
+            initial = draft,
+            currentPhoto = currentPhoto,
+            draftFile = draftFile,
+            widthDp = widgetSize.first,
+            heightDp = widgetSize.second,
+            display = { now -> previewDisplay(context, g, (subgroup ?: settings.subgroup).takeIf { it > 0 }, now) },
+            onDone = {
+                draft = it
+                setup = false
+            },
+            onBack = { setup = false },
+        )
+        return
+    }
 
     if (picking) {
         val canBack = appGroup != null || ownGroup != null
@@ -181,16 +245,36 @@ private fun ConfigureScreen(appWidgetId: Int, onDone: (WidgetConfig) -> Unit, on
                 SubgroupChips(subgroup, onSelect = { subgroup = it }, withInherit = true)
             }
             Section("Стиль") {
+                val photoFile = draft.newPhoto?.takeIf { it.isFile } ?: currentPhoto
                 StylePicker(
                     selected = style,
                     display = { now -> previewDisplay(context, group, effectiveSubgroup, now) },
-                    onSelect = { style = it },
+                    onSelect = {
+                        style = it
+                        // У стиля есть свои настройки или фото — сразу на экран настройки.
+                        val st = Styles.byId(context, it)
+                        if (st.usesPhoto || st.options.isNotEmpty()) setup = true
+                    },
+                    customFor = { st ->
+                        if (!st.usesPhoto && st.options.isEmpty()) {
+                            null
+                        } else {
+                            StyleCustom(draft.options, if (st.usesPhoto) WidgetPhotos.input(photoFile, draft.frame) else null)
+                        }
+                    },
+                    refresh = draft,
                 )
+                val selected = Styles.byId(context, style)
+                if (selected.usesPhoto || selected.options.isNotEmpty()) {
+                    OutlinedButton(onClick = { setup = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (selected.usesPhoto) "Фото и настройки стиля" else "Настройки стиля")
+                    }
+                }
             }
             Button(
                 enabled = group != null,
                 modifier = Modifier.fillMaxWidth(),
-                onClick = { onDone(WidgetConfig(group = if (useAppGroup) null else ownGroup, style = style, subgroup = subgroup)) },
+                onClick = { onDone(WidgetConfig(group = if (useAppGroup) null else ownGroup, style = style, subgroup = subgroup), draft) },
             ) { Text("Готово") }
             Text(
                 "Тап по виджету открывает расписание на сегодня и неделю.",
@@ -198,4 +282,12 @@ private fun ConfigureScreen(appWidgetId: Int, onDone: (WidgetConfig) -> Unit, on
             )
         }
     }
+}
+
+/** Размер виджета в dp, как его видит лаунчер в портрете; если ещё неизвестен — стандартный 4×2. */
+private fun widgetSizeDp(context: android.content.Context, appWidgetId: Int): Pair<Float, Float> {
+    val o = AppWidgetManager.getInstance(context).getAppWidgetOptions(appWidgetId)
+    val w = o?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) ?: 0
+    val h = o?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT) ?: 0
+    return if (w > 0 && h > 0) w.toFloat() to h.toFloat() else 316f to 168f
 }

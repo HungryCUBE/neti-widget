@@ -50,8 +50,61 @@ data class ThemeSpec(
     val agenda: AgendaSpec = AgendaSpec(),
     /** Поведение на разных размерах. */
     val adapt: AdaptSpec = AdaptSpec(),
-    /** Переопределения для форм "short", "compact", "large": любые поля этого же файла. */
+    /**
+     * Переопределения: формы "short", "compact", "large", тон "tone:light" / "tone:dark" / "tone:vivid"
+     * и значения настроек "имя:значение" (см. options). Внутри — любые поля этого же файла.
+     */
     val variants: Map<String, JsonObject> = emptyMap(),
+    /** Именованные подложки для элементов раскладки (chip, panel, counter, полосы прогресса…), устроены как background. */
+    val surfaces: Map<String, BackgroundSpec> = emptyMap(),
+    /**
+     * Цвет, по яркости которого выбирается вариант tone:light (светлый фон), tone:dark или tone:vivid (яркий),
+     * например "@wallpaper.primary | #F4E6D4".
+     */
+    val tone: String? = null,
+    /** Настройки стиля для пользователя. Экран настройки виджета строится по ним сам. */
+    val options: Map<String, OptionSpec> = emptyMap(),
+)
+
+/** Настройка стиля. choice и switch выбирают варианты "имя:значение", range — число для opacityFrom и blurFrom. */
+@Serializable
+data class OptionSpec(
+    /** choice — одно из values, range — число от min до max, switch — on или off. */
+    val type: String = "choice",
+    val label: String = "",
+    val hint: String? = null,
+    val values: List<String> = emptyList(),
+    /** Подписи значений choice. */
+    val labels: Map<String, String> = emptyMap(),
+    /** choice — значение, range — число, switch — on или off. */
+    val default: String? = null,
+    val min: Float = 0f,
+    val max: Float = 100f,
+    /** range: что дописать к числу ("%"). */
+    val unit: String = "",
+)
+
+/** Тень как box-shadow / text-shadow в CSS: blur — как в CSS, spread — расширение, inset — внутри фигуры. */
+@Serializable
+data class BoxShadowSpec(
+    val dx: Float = 0f,
+    val dy: Float = 0f,
+    val blur: Float = 0f,
+    val spread: Float = 0f,
+    val color: String = "#40000000",
+    val inset: Boolean = false,
+    @SerialName("when") val whenMode: String? = null,
+)
+
+/** Место фигуры внутри родителя, как position: absolute в CSS. Число — dp, строка "16%" — доля стороны родителя. */
+@Serializable
+data class BoxSpec(
+    val left: JsonPrimitive? = null,
+    val top: JsonPrimitive? = null,
+    val right: JsonPrimitive? = null,
+    val bottom: JsonPrimitive? = null,
+    val width: JsonPrimitive? = null,
+    val height: JsonPrimitive? = null,
 )
 
 @Serializable
@@ -70,12 +123,14 @@ data class TextSpec(
     val weight: Int? = null,
     /** В em, как letter-spacing в CSS. */
     val letterSpacing: Float? = null,
-    /** Множитель размера шрифта. */
+    /** Множитель размера шрифта. 0 — как line-height: normal в CSS (по метрикам шрифта). */
     val lineHeight: Float? = null,
     val color: String? = null,
     /** Градиент вместо цвета (хромовый текст и т. п.). */
     val fill: GradientSpec? = null,
     val textShadow: ShadowSpec? = null,
+    /** Тени как text-shadow в CSS (blur — как в CSS), первая — сверху. */
+    val shadows: List<BoxShadowSpec>? = null,
     val uppercase: Boolean? = null,
     /** Цифры одинаковой ширины. */
     val tabular: Boolean? = null,
@@ -119,8 +174,10 @@ data class GradientSpec(
     /** Для radial: центр в долях и радиус в долях от radiusOf. */
     val center: List<Float>? = null,
     val radius: Float? = null,
-    /** diagonal | width | height | min */
+    /** diagonal | width | height | min | farthest (до дальнего угла — как в CSS по умолчанию) | closest (до ближней стороны) */
     val radiusOf: String = "diagonal",
+    /** radial: эллипс по пропорциям прямоугольника, как radial-gradient(ellipse …) в CSS. */
+    val ellipse: Boolean = false,
     @Serializable(with = StopListSerializer::class) val stops: List<StopSpec> = emptyList(),
     /** Общая прозрачность 0..1. */
     val opacity: Float? = null,
@@ -130,7 +187,7 @@ data class GradientSpec(
 data class MeshPointSpec(val x: Float, val y: Float, val radius: Float, val color: String)
 
 /**
- * Слой фона. type: solid, linear, radial, mesh, wallpaperMesh, image, photo, rules, line, band.
+ * Слой фона. type: solid, linear, radial, mesh, wallpaperMesh, image, photo, rules, line, band, shape.
  * Поля зависят от типа, лишние не мешают.
  */
 @Serializable
@@ -143,6 +200,7 @@ data class LayerSpec(
     val center: List<Float>? = null,
     val radius: Float? = null,
     val radiusOf: String = "diagonal",
+    val ellipse: Boolean = false,
     @Serializable(with = StopListSerializer::class) val stops: List<StopSpec> = emptyList(),
     val opacity: Float? = null,
     /** mesh, wallpaperMesh: цветные пятна. */
@@ -160,9 +218,22 @@ data class LayerSpec(
     val y: Float? = null,
     /** band: точка поворота в долях. */
     val pivot: List<Float>? = null,
+    /** shape: фигура внутри карточки (обрезается по ней), как вложенный блок с position: absolute. */
+    val box: BoxSpec? = null,
+    /** shape: скругления как border-radius в CSS: "24", "50%", "24px 24px 50% 50% / 24px 24px 16px 16px". */
+    val corners: String? = null,
+    /** shape: заливка — цвет-строка или градиент-объект. */
+    val fill: JsonElement? = null,
+    /** shape: свои слои, тени, рамка и размытие — как у background (поверх fill). */
+    val surface: BackgroundSpec? = null,
+    /** photo: размытие как blur() в CSS; с blurFrom — при значении настройки 100. */
+    val blur: Float? = null,
+    val blurFrom: String? = null,
+    /** Прозрачность умножается на значение настройки (range), делённое на её значение по умолчанию. */
+    val opacityFrom: String? = null,
     @SerialName("when") val whenMode: String? = null,
 ) {
-    fun gradient() = GradientSpec(type, angle, from, to, center, radius, radiusOf, stops, opacity)
+    fun gradient() = GradientSpec(type, angle, from, to, center, radius, radiusOf, ellipse, stops, opacity)
 }
 
 @Serializable
@@ -196,6 +267,16 @@ data class BackgroundSpec(
     val highlights: List<HighlightSpec> = emptyList(),
     /** Тень карточки. На рабочем столе ей нужен adapt.widgetInset. */
     val shadow: ShadowSpec? = null,
+    /** Скругления как border-radius в CSS, вместо radius: "50%", "24px 24px 50% 50% / 24px 24px 16px 16px". */
+    val corners: String? = null,
+    /** Тени как box-shadow в CSS: снаружи и inset. Первая в списке — сверху. Наружным на рабочем столе нужен adapt.widgetInset. */
+    val shadows: List<BoxShadowSpec> = emptyList(),
+    /**
+     * Размыть то, что уже нарисовано под подложкой, как backdrop-filter: blur() saturate() в CSS.
+     * Обоев виджет не видит — размывается только нарисованное им самим (своё фото, подложка превью).
+     */
+    val backdropBlur: Float = 0f,
+    val saturate: Float = 1f,
 )
 
 @Serializable
@@ -218,6 +299,13 @@ data class ProgressSpec(
     val glow: ShadowSpec? = null,
     /** Сила глянца 0..1 (glossy). */
     val gloss: Float = 0.6f,
+    /** Полоса и заполнение — подложки из surfaces (градиенты, тени, блики), вместо track и fill. */
+    val trackSurface: String? = null,
+    val fillSurface: String? = null,
+    /** Отступ заполнения от краёв полосы (рамка внутри полосы). */
+    val fillInset: Float = 0f,
+    /** Заполнение обрезается по полосе (прямой правый край), как overflow: hidden в CSS. */
+    val fillClip: Boolean = false,
     /** butt | round */
     val cap: String = "butt",
     /** dots: шаг и наибольшее число точек; text: наибольшее число символов. */
@@ -237,8 +325,24 @@ data class ProgressSpec(
 
 @Serializable
 data class CounterSpec(
-    /** text | orb | ring. Шрифт и цвет цифр — typography.counter. */
+    /** text | orb | ring | surface. Шрифт и цвет цифр — typography.counter. */
     val type: String = "text",
+    /** surface: подложка из surfaces. */
+    val surface: String? = null,
+    /** surface: размер круга (капли); без него подложка по тексту с полями insets. */
+    val size: Float? = null,
+    /** surface: поля как padding в CSS — [все], [верх и низ, бока], [верх, бока, низ] или [верх, право, низ, лево]. */
+    val insets: List<Float> = emptyList(),
+    /** Подпись «мин» (роль unit): none — она внутри counterFormat, inline — справа по базовой линии, below — под числом. */
+    val unit: String = "none",
+    val unitGap: Float = 3f,
+    /**
+     * Где отсчёт в раскладке hero: inline — справа от названия по базовой линии, side — справа от названия и деталей,
+     * aside — справа от всего блока вместе с шапкой, header — в шапке справа.
+     */
+    val placement: String = "inline",
+    /** side и aside: center или end (по низу). */
+    val valign: String = "center",
     /** orb: заливка капли (цвет или градиент), ring: цвет дуги. */
     val fill: JsonElement? = null,
     /** ring: подложка; orb: ободок. */
@@ -257,6 +361,8 @@ data class IconSpec(
     val paths: List<String> = emptyList(),
     val viewBox: Float = 24f,
     val stroke: Float = 2f,
+    /** Контуры заливаются, а не обводятся. */
+    val fill: Boolean = false,
     /** Пиксельная иконка: [x, y, w, h, "#цвет"] в сетке grid×grid. */
     val pixels: List<JsonArray> = emptyList(),
     val grid: Float = 16f,

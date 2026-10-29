@@ -5,7 +5,10 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.RadialGradient
+import android.graphics.Shader
 import androidx.test.core.app.ApplicationProvider
 import io.github.hungrycube.lessonwidget.core.display.DisplayBuilder
 import io.github.hungrycube.lessonwidget.core.display.Phase
@@ -16,7 +19,9 @@ import io.github.hungrycube.lessonwidget.core.parse.NstuParser
 import io.github.hungrycube.lessonwidget.core.parse.ScheduleAssembler
 import io.github.hungrycube.lessonwidget.core.time.NOVOSIBIRSK
 import io.github.hungrycube.lessonwidget.render.Demo
+import io.github.hungrycube.lessonwidget.render.PhotoInput
 import io.github.hungrycube.lessonwidget.render.RenderMode
+import io.github.hungrycube.lessonwidget.render.StyleCustom
 import io.github.hungrycube.lessonwidget.render.Styles
 import io.github.hungrycube.lessonwidget.render.WidgetRenderer
 import io.github.hungrycube.lessonwidget.render.WidgetStyle
@@ -62,8 +67,14 @@ class ScreenshotTest {
         File(out, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
+    // Стиль со своим фото на всех состояниях и размерах — с тестовым закатом, а не с примером из файла.
+    private val sunsetCustom by lazy { StyleCustom(photo = PhotoInput(testPhoto(false))) }
+
     private fun render(st: WidgetStyle, d: WidgetDisplay, w: Float, h: Float, now: Long, density: Float = 2f) =
-        renderer.render(st, d, w, h, RenderMode.PREVIEW, nowMillis = now, density = density, dynamicColor = false).bitmap
+        renderer.render(
+            st, d, w, h, RenderMode.PREVIEW, nowMillis = now, density = density, dynamicColor = false,
+            custom = sunsetCustom.takeIf { st.usesPhoto },
+        ).bitmap
 
     @Test
     fun eachStyleLikeTheMockup() {
@@ -76,6 +87,77 @@ class ScreenshotTest {
             tiles += st.title to bmp
         }
         save("overview", sheet(tiles, columns = 3))
+    }
+
+    /** Тестовое «фото»: закат (тёмный низ — светлый текст) или снег (светлый — тёмный текст). */
+    private fun testPhoto(snow: Boolean): Bitmap {
+        val b = Bitmap.createBitmap(1200, 800, Bitmap.Config.ARGB_8888)
+        val c = Canvas(b)
+        val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        if (snow) {
+            p.shader = LinearGradient(
+                0f, 0f, 0f, 800f, intArrayOf(0xFFBCD3EC.toInt(), 0xFFE3EDF8.toInt(), 0xFFFFFFFF.toInt(), 0xFFF6F8FB.toInt()),
+                floatArrayOf(0f, 0.5f, 0.58f, 1f), Shader.TileMode.CLAMP,
+            )
+            c.drawRect(0f, 0f, 1200f, 800f, p)
+            p.shader = null
+            p.color = 0xFF46555C.toInt()
+            c.drawRect(0f, 416f, 1200f, 456f, p)
+            p.color = Color.WHITE
+            c.drawOval(140f, 560f, 820f, 760f, p)
+        } else {
+            p.shader = LinearGradient(
+                0f, 0f, 0f, 800f,
+                intArrayOf(
+                    0xFF3B2A6B.toInt(), 0xFF9A3F78.toInt(), 0xFFE2755F.toInt(), 0xFFFFBF7A.toInt(),
+                    0xFF3A3F74.toInt(), 0xFF22295A.toInt(), 0xFF10163A.toInt(),
+                ),
+                floatArrayOf(0f, 0.26f, 0.46f, 0.56f, 0.565f, 0.72f, 1f), Shader.TileMode.CLAMP,
+            )
+            c.drawRect(0f, 0f, 1200f, 800f, p)
+            p.shader = RadialGradient(
+                770f, 450f, 160f, intArrayOf(0xFFFFF6D0.toInt(), 0xFFFFD27A.toInt(), 0x80FFAA5A.toInt(), 0x00FFAA5A),
+                floatArrayOf(0f, 0.2f, 0.45f, 1f), Shader.TileMode.CLAMP,
+            )
+            c.drawRect(0f, 0f, 1200f, 800f, p)
+        }
+        return b
+    }
+
+    /** Новые стили как на макетах: обои трёх видов, своё фото на всех подложках, вид на рабочем столе. */
+    @Test
+    fun newStylesLikeTheMockups() {
+        val now = nsk(2026, 10, 26, 11, 11)
+        val demo = Demo.display(now)
+        val tiles = ArrayList<Pair<String, Bitmap>>()
+        fun shot(st: WidgetStyle, mode: RenderMode = RenderMode.PREVIEW, custom: StyleCustom? = null, wallpaper: List<Int?>? = null) =
+            renderer.render(st, demo, 316f, 168f, mode, nowMillis = now, density = 2f, dynamicColor = false, custom = custom, wallpaper = wallpaper).bitmap
+
+        val wp = Styles.byId(context, "wallpaper")
+        tiles += "Обои: светлые" to shot(wp)
+        tiles += "Обои: тёмные" to shot(wp, wallpaper = listOf(0xFF0C1122.toInt(), 0xFF33478A.toInt(), 0xFF1D2B55.toInt()))
+        tiles += "Обои: яркие" to shot(wp, wallpaper = listOf(0xFFE8457F.toInt(), 0xFFFF8A5C.toInt(), 0xFF7A3CFF.toInt()))
+        tiles += "Обои: серые" to shot(wp, wallpaper = listOf(0xFF8A8A8A.toInt(), null, null))
+        tiles += "Обои: жёлтые" to shot(wp, wallpaper = listOf(0xFFE0C020.toInt(), null, null))
+
+        val ph = Styles.byId(context, "photo")
+        val sunset = PhotoInput(testPhoto(false))
+        val snow = PhotoInput(testPhoto(true), focusY = 0.6f)
+        tiles += "Фото: пример без фото" to shot(ph)
+        for (backing in listOf("gradient", "glass", "none")) {
+            tiles += "Фото: $backing, закат" to shot(ph, custom = StyleCustom(mapOf("backing" to backing), sunset))
+            tiles += "Фото: $backing, снег" to shot(ph, custom = StyleCustom(mapOf("backing" to backing), snow))
+        }
+        tiles += "Фото: размытие 60, без акцента" to shot(ph, custom = StyleCustom(mapOf("blur" to "60", "accent" to "off"), sunset))
+        tiles += "Фото: тёмный текст, отражено" to
+            shot(ph, custom = StyleCustom(mapOf("text" to "dark", "dim" to "80"), PhotoInput(testPhoto(false), flip = true)))
+        tiles += "Фото: стекло на рабочем столе" to shot(ph, RenderMode.WIDGET, StyleCustom(mapOf("backing" to "glass"), sunset))
+        for (id in listOf("frutiger", "y2k")) {
+            val st = Styles.byId(context, id)
+            tiles += st.title to shot(st)
+            tiles += "${st.title}: рабочий стол" to shot(st, RenderMode.WIDGET)
+        }
+        save("new_styles", sheet(tiles, columns = 3))
     }
 
     @Test
@@ -152,7 +234,8 @@ class ScreenshotTest {
         val legacy = io.github.hungrycube.lessonwidget.legacy.WidgetRenderer(context)
         val tiles = ArrayList<Pair<String, Bitmap>>()
         for (st in Styles.all(context)) {
-            val old = io.github.hungrycube.lessonwidget.legacy.Styles.all.first { it.id == st.id }
+            // У новых стилей старого кода нет.
+            val old = io.github.hungrycube.lessonwidget.legacy.Styles.all.firstOrNull { it.id == st.id } ?: continue
             tiles += "${st.title}: было" to legacy.render(
                 old, d, 350f, 390f, io.github.hungrycube.lessonwidget.legacy.RenderMode.PREVIEW,
                 nowMillis = now, density = 1f, dynamicColor = false,

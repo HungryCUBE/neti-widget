@@ -9,6 +9,8 @@ import io.github.hungrycube.lessonwidget.data.CrashLog
 import io.github.hungrycube.lessonwidget.render.layout.Layouts
 import io.github.hungrycube.lessonwidget.render.theme.AdaptSpec
 import io.github.hungrycube.lessonwidget.render.theme.ColorSources
+import io.github.hungrycube.lessonwidget.render.theme.LayerSpec
+import io.github.hungrycube.lessonwidget.render.theme.OptionSpec
 import io.github.hungrycube.lessonwidget.render.theme.Problems
 import io.github.hungrycube.lessonwidget.render.theme.Theme
 import io.github.hungrycube.lessonwidget.render.theme.ThemeAssets
@@ -37,14 +39,28 @@ class WidgetStyle internal constructor(
     val warnings: List<String>,
     /** Откуда стиль: файл в assets или импортированный. */
     val source: String,
+    /** Настройки стиля для пользователя (экран настройки строится по ним). */
+    val options: Map<String, OptionSpec> = emptyMap(),
+    /** В стиле есть слой своего фото: при выборе стиля для виджета открывается выбор фото. */
+    val usesPhoto: Boolean = false,
 ) {
     private val specs = ConcurrentHashMap<List<String>, ThemeSpec>()
 
     fun spec(forms: List<String>): ThemeSpec = specs.getOrPut(forms) { ThemeLoader.decode(ThemeLoader.compose(chain, forms), source) }
 
-    /** Тема для формы [forms] (см. [SizeClass.forms]). [widget] — для рабочего стола. */
-    fun theme(forms: List<String>, sources: ColorSources, widget: Boolean): Theme =
-        ThemeLoader.resolve(spec(forms), sources, assets, widget)
+    /**
+     * Тема для формы [forms] (см. [SizeClass.forms]). [widget] — для рабочего стола. [chosen] — значения настроек
+     * этого виджета (незаданные — по умолчанию), [photo] — его своё фото. Тон фона (tone:…) считается по цветам здесь же.
+     */
+    fun theme(forms: List<String>, sources: ColorSources, widget: Boolean, chosen: Map<String, String> = emptyMap(), photo: PhotoInput? = null): Theme {
+        val values = ThemeLoader.optionValues(options, chosen)
+        val optionForms = options.keys.mapNotNull { name ->
+            val o = options.getValue(name)
+            if (o.type == "range") null else "$name:${values[name]}"
+        }
+        val tone = if (options.isEmpty() && spec(forms).tone == null) null else ThemeLoader.tone(spec(forms + optionForms), sources)
+        return ThemeLoader.resolve(spec(forms + listOfNotNull(tone) + optionForms), sources, assets, widget, values, photo)
+    }
 
     override fun toString() = "WidgetStyle($id)"
 }
@@ -246,7 +262,10 @@ object Styles {
         val local = Problems()
         val fontExists = { name: String -> FontCache.exists(context, name) }
         val variantForms = ThemeLoader.variantForms(chain)
-        val combos = subsets(variantForms.filter { it in ThemeLoader.FORMS })
+        // Все сочетания форм размера, и с каждым — каждый вариант тона и настроек по отдельности
+        // (все сочетания всех вариантов — это сотни проверок на запуске).
+        val others = variantForms.filter { it !in ThemeLoader.FORMS }
+        val combos = subsets(variantForms.filter { it in ThemeLoader.FORMS }).flatMap { s -> listOf(s) + others.map { s + it } }
         var base: ThemeSpec? = null
         for (forms in combos) {
             try {
@@ -275,8 +294,13 @@ object Styles {
             assets = assets,
             warnings = local.warnings.distinct(),
             source = source,
+            options = spec.options,
+            usesPhoto = hasPhoto(spec.background.layers),
         )
     }
+
+    private fun hasPhoto(layers: List<LayerSpec>): Boolean =
+        layers.any { it.type == "photo" || hasPhoto(it.surface?.layers.orEmpty()) }
 
     private fun subsets(items: List<String>): List<List<String>> =
         items.fold(listOf(emptyList<String>())) { acc, x -> acc + acc.map { it + x } }
@@ -284,13 +308,12 @@ object Styles {
 
     private val images = LruCache<String, Bitmap>(8)
 
-    /** Картинки стиля: из assets/themes или из папки импортированных; «@photo» — своё фото. */
+    /** Картинки стиля: из assets/themes или из папки импортированных. Своё фото виджета передаётся отдельно (PhotoInput). */
     private fun assetsFor(context: Context, userDir: File?): ThemeAssets = ThemeAssets { src ->
         val key = (userDir?.path ?: "assets") + "/" + src
         images.get(key) ?: runCatching {
             val opts = BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.ARGB_8888 }
             when {
-                src == ThemeLoader.PHOTO_SRC -> PhotoStore.file(context).takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.path, opts) }
                 userDir != null -> BitmapFactory.decodeFile(File(userDir, src).path, opts)
                 else -> context.assets.open("$ASSET_DIR/$src").use { BitmapFactory.decodeStream(it, null, opts) }
             }
@@ -308,11 +331,4 @@ object Styles {
             throw e
         }
     }
-}
-
-/** Своё фото для слоя photo и цветов @photo. Выбора в интерфейсе пока нет — файл кладётся сюда. */
-object PhotoStore {
-    fun file(context: Context): File = File(context.applicationContext.filesDir, "theme_photo.jpg")
-
-    fun bitmap(context: Context): Bitmap? = file(context).takeIf { it.isFile }?.let { runCatching { BitmapFactory.decodeFile(it.path) }.getOrNull() }
 }

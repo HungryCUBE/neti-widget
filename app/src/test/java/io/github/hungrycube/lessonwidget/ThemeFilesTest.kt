@@ -11,6 +11,9 @@ import io.github.hungrycube.lessonwidget.render.Styles
 import io.github.hungrycube.lessonwidget.render.WidgetRenderer
 import io.github.hungrycube.lessonwidget.render.layout.Layouts
 import io.github.hungrycube.lessonwidget.render.theme.AdaptSpec
+import io.github.hungrycube.lessonwidget.render.theme.ColorExpr
+import io.github.hungrycube.lessonwidget.render.theme.ColorMath
+import io.github.hungrycube.lessonwidget.render.theme.ColorSources
 import io.github.hungrycube.lessonwidget.render.theme.ThemeLoader
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -40,14 +43,19 @@ class ThemeFilesTest {
     @Test
     fun everyAssetThemeLoadsWithoutProblems() {
         val files = context.assets.list("themes")!!.filter { it.endsWith(".json") }
-        assertEquals(9, files.size)
+        assertEquals(13, files.size)
         val styles = Styles.all(context)
         assertEquals("Проблемы в файлах стилей:\n" + Styles.problems(context).joinToString("\n"), emptyList<String>(), Styles.problems(context))
-        assertEquals(listOf("glass", "minimal", "oled", "terminal", "material", "notebook", "nothing", "win95", "neti"), styles.map { it.id })
+        assertEquals(
+            listOf("glass", "minimal", "oled", "terminal", "material", "notebook", "nothing", "win95", "neti", "wallpaper", "frutiger", "y2k", "photo"),
+            styles.map { it.id },
+        )
         for (st in styles) {
             assertTrue("${st.id}: нет раскладки ${st.layout}", st.layout in Layouts.ids)
             // Все сочетания форм: шрифты каждой роли существуют.
-            for (forms in listOf(emptyList(), listOf("short"), listOf("compact"), listOf("large"), listOf("short", "compact"), listOf("compact", "large"))) {
+            val extra = ThemeLoader.TONES + ThemeLoader.optionForms(st.options)
+            val sizes = listOf(emptyList(), listOf("short"), listOf("compact"), listOf("large"), listOf("short", "compact"), listOf("compact", "large"))
+            for (forms in sizes + sizes.flatMap { s -> extra.map { s + it } }) {
                 val spec = st.spec(forms)
                 for ((role, t) in spec.typography) {
                     t.font?.let { assertTrue("${st.id} $forms: роль $role — нет шрифта $it", FontCache.exists(context, it)) }
@@ -134,5 +142,29 @@ class ThemeFilesTest {
         assertTrue(tiny.compact && tiny.scale >= a.minScale && tiny.scale < 1f)
         // Огромный — не больше maxScale.
         assertTrue(Adaptive.classify(600f, 600f, a, all).scale <= a.maxScale)
+    }
+
+    @Test
+    fun colorFunctions() {
+        val src = ColorSources(null, live = false)
+        val pal = mapOf("base" to 0xFFDCAE88.toInt())
+        fun c(e: String) = ColorExpr.resolve(e, { pal[it] }, src)
+        // Производный цвет из макета «Градиента из обоев»: текст из базы.
+        assertEquals(0xFF2F1A0C.toInt(), c("hsl(@base, dh: -3.14, s: *1.0875, l: 0.1157)"))
+        assertEquals(0x802F1A0C.toInt(), c("hsl(@base, dh: -3.14, s: *1.0875, l: 0.1157)/50%"))
+        // Обоев нет (превью) — берётся запасной вариант.
+        assertEquals(0xFF123456.toInt(), c("hsl(@wallpaper.primary, l: 0.5) | #123456"))
+        assertEquals(0xFF808080.toInt(), c("mix(#000000, #FFFFFF, 0.5)"))
+        // Контраст: светлый текст на жёлтом затемняет фон, пока не станет 4.5:1.
+        val dark = c("contrast(#E0E040, against: #FFFFFF, min: 4.5)")!!
+        assertTrue(ColorMath.contrast(dark, 0xFFFFFFFF.toInt()) >= 4.5f)
+        assertEquals("light", ColorMath.tone(0xFFF4E6D4.toInt()))
+        assertEquals("dark", ColorMath.tone(0xFF0C1122.toInt()))
+        assertEquals("vivid", ColorMath.tone(0xFFE8457F.toInt()))
+        // Понятные ошибки.
+        assertNotNull(ColorExpr.check("hsl(@base, q: 1)", setOf("base")))
+        assertNotNull(ColorExpr.check("hsl(@wallpaper.primary, l: 0.5)", emptySet()))
+        assertNotNull(ColorExpr.check("rgb(1, 2, 3)", emptySet()))
+        assertNull(ColorExpr.check("contrast(hsl(@wallpaper.primary, l: 0.5) | #DCAE88, against: #2F1A0C, min: 4.5)", emptySet()))
     }
 }

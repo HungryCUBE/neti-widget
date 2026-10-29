@@ -37,6 +37,7 @@ fun Frame.card() = Backgrounds.draw(p, th.background, 0f, 0f, W, H, mode)
 internal object Backgrounds {
 
     fun draw(p: Painter, bg: BackgroundStyle, l: Float, t: Float, r: Float, b: Float, mode: RenderMode) {
+        if (bg.extended) return drawShape(p, bg, l, t, r, b, mode)
         fun active(w: String?) = w == null || (w == "widget") == (mode == RenderMode.WIDGET)
         val radius = bg.radius
         bg.shadow?.let { s ->
@@ -133,7 +134,103 @@ internal object Backgrounds {
                 rotate(layer.angle, l + w * layer.pivotX, t + h * layer.pivotY)
                 p.rect(l + w * layer.x, t - h, l + w * layer.x + layer.width, t + 2 * h, layer.color)
             }
+            is Layer.Photo -> photo(p, layer, l, t, r, b)
+            // Фигуры рисует drawShape: им нужна маска родителя и режим.
+            is Layer.Shape -> Unit
         }
+    }
+
+    /**
+     * Фон с новыми возможностями: фигура с CSS-скруглениями, тени box-shadow, размытие под подложкой, фигуры внутри.
+     * Порядок как в CSS: наружные тени, размытие под фигурой, заливки, inset-тени, вложенные фигуры, блики, рамка.
+     * Всё внутри обрезается по фигуре (overflow: hidden).
+     */
+    private fun drawShape(p: Painter, bg: BackgroundStyle, l: Float, t: Float, r: Float, b: Float, mode: RenderMode) {
+        fun active(w: String?) = w == null || (w == "widget") == (mode == RenderMode.WIDGET)
+        val shape = Shape.of(l, t, r, b, bg.radius, bg.corners)
+        val path = shape.path()
+        bg.shadow?.let { s ->
+            p.canvas.withSave {
+                clipOutPath(path)
+                p.fill.shader = null
+                p.fill.color = s.color or 0xFF000000.toInt()
+                p.fill.setShadowLayer(s.blur, s.dx, s.dy, s.color)
+                drawPath(path, p.fill)
+                p.fill.clearShadowLayer()
+            }
+        }
+        Shadows.outer(p, shape, bg.shadows)
+        if (bg.backdropBlur > 0f || bg.saturate != 1f) p.blurBehind(path, l, t, r, b, bg.backdropBlur, bg.saturate)
+        p.canvas.withSave {
+            clipPath(path)
+            for (layer in bg.layers) if (layer !is Layer.Shape && active(layer.whenMode)) layer(p, layer, l, t, r, b, 0f)
+            Shadows.inner(p, shape, bg.shadows)
+            for (layer in bg.layers) {
+                if (layer !is Layer.Shape || !active(layer.whenMode)) continue
+                val box = layer.box.place(l, t, r, b)
+                draw(p, layer.style, box[0], box[1], box[2], box[3], mode)
+            }
+        }
+        for (hl in bg.highlights) {
+            if (!active(hl.whenMode)) continue
+            when (hl.type) {
+                "innerStroke" -> {
+                    val s = shape.inset(hl.inset + hl.width / 2f)
+                    p.stroke.shader = hl.ink.gradient?.shader(l, t, r, b)
+                    p.stroke.color = hl.ink.paintColor
+                    p.stroke.strokeWidth = hl.width
+                    p.canvas.drawPath(s.path(), p.stroke)
+                    p.stroke.shader = null
+                }
+                "gloss" -> p.canvas.withSave {
+                    clipPath(path)
+                    val gb = t + (b - t) * hl.height
+                    p.fill.shader = hl.ink.gradient?.shader(l, t, r, gb)
+                        ?: LinearGradient(0f, t, 0f, gb, hl.ink.color, hl.ink.color and 0x00FFFFFF, Shader.TileMode.CLAMP)
+                    p.fill.color = if (hl.ink.gradient != null) hl.ink.paintColor else 0xFF000000.toInt()
+                    drawRect(l + hl.inset, t + hl.inset, r - hl.inset, gb, p.fill)
+                    p.fill.shader = null
+                }
+            }
+        }
+        bg.border?.takeIf { active(it.whenMode) }?.let { border ->
+            p.stroke.shader = border.ink.gradient?.shader(l, t, r, b)
+            p.stroke.color = border.ink.paintColor
+            p.stroke.strokeWidth = border.width
+            p.canvas.drawPath(shape.inset(border.width / 2f).path(), p.stroke)
+            p.stroke.shader = null
+        }
+    }
+
+    /** Своё фото: кадр под пропорции по точке фокуса, отражение, размытие самого фото (без ореола по краям). */
+    private fun photo(p: Painter, layer: Layer.Photo, l: Float, t: Float, r: Float, b: Float) {
+        val ph = layer.photo ?: return
+        val w = r - l
+        val h = b - t
+        if (w <= 0f || h <= 0f) return
+        val crop = ph.crop(w / h)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply { alpha = layer.alpha }
+        var src: Bitmap = ph.bitmap
+        var srcRect: Rect? = crop
+        var temp: Bitmap? = null
+        if (layer.blur > 0f) {
+            val k = p.deviceScale()
+            val sigma = layer.blur / 2f * k
+            val down = max(1, (sigma / 3f).toInt())
+            val tw = max(2, (w * k / down).roundToInt())
+            val th = max(2, (h * k / down).roundToInt())
+            temp = Bitmap.createBitmap(tw, th, Bitmap.Config.ARGB_8888).also { bmp ->
+                android.graphics.Canvas(bmp).drawBitmap(ph.bitmap, crop, Rect(0, 0, tw, th), Paint(Paint.FILTER_BITMAP_FLAG))
+                Blur.gaussian(bmp, sigma / down)
+            }
+            src = temp
+            srcRect = null
+        }
+        p.canvas.withSave {
+            if (ph.flip) scale(-1f, 1f, (l + r) / 2f, (t + b) / 2f)
+            drawBitmap(src, srcRect, RectF(l, t, r, b), paint)
+        }
+        temp?.recycle()
     }
 
     /** Часть картинки: для cover — середина нужной пропорции, иначе вся. */
@@ -190,7 +287,33 @@ private fun Frame.inkRect(l: Float, t: Float, r: Float, b: Float, radius: Float,
     p.fill.shader = null
 }
 
+/**
+ * Полоса из подложек (progress.trackSurface / fillSurface): градиенты, тени, блики как у фона.
+ * Заполнение отступает от краёв на fillInset и при fillClip обрезается по полосе (прямой правый край).
+ */
+private fun Frame.surfaceProgress(ps: ProgressStyle, l: Float, t: Float, r: Float, value: Float) {
+    val h = ps.height
+    val track = ps.trackSurface
+    if (track != null) Backgrounds.draw(p, track, l, t, r, t + h, mode) else inkRect(l, t, r, t + h, ps.radius, ps.track, l, r)
+    val i = ps.fillInset
+    val il = l + i
+    val ir = r - i
+    val fw = (ir - il) * value
+    if (fw <= 0.5f && (ps.minFill > 0f || fw <= 0f)) return
+    val fr = il + if (ps.minFill > 0f) max(fw, ps.minFill) else fw
+    p.canvas.withSave {
+        if (ps.fillClip) clipPath(Shape.of(l, t, r, t + h, ps.radius, track?.corners).path())
+        val fill = ps.fillSurface
+        if (fill != null) {
+            Backgrounds.draw(p, fill, il, t + i, fr, t + h - i, mode)
+        } else {
+            inkRect(il, t + i, fr, t + h - i, if (ps.fillClip) 0f else ps.radius, ps.fill, il, ir)
+        }
+    }
+}
+
 private fun Frame.barProgress(ps: ProgressStyle, l: Float, t: Float, r: Float, value: Float) {
+    if (ps.trackSurface != null || ps.fillSurface != null) return surfaceProgress(ps, l, t, r, value)
     val h = ps.height
     inkRect(l, t, r, t + h, ps.radius, ps.track, l, r)
     val fw = (r - l) * value
@@ -330,6 +453,17 @@ fun Frame.bevel(l: Float, t: Float, r: Float, b: Float, raised: Boolean, thick: 
  */
 fun Frame.countdown(x: Float, y: Float, w: Float, h: Float, text: String, size: Float, color: Int? = null) {
     if (d.countdownTo == null) return
+    if (th.counter.type == "surface") {
+        // Блок с подложкой рисуется своим размером, по выравниванию роли counter в отведённом месте.
+        val box = counterBox() ?: return
+        val bx = when (role("counter").align) {
+            Align.START -> x
+            Align.END -> x + w - box.w
+            Align.CENTER -> x + (w - box.w) / 2f
+        }
+        box.draw(bx, y + (h - box.h) / 2f)
+        return
+    }
     val role = role("counter")
     val t = role.typo.sized(size)
     val ty = y + (h - p.lineHeight(t)) / 2f
@@ -391,6 +525,100 @@ private fun lighten(c: Int): Int {
     return (c and 0xFF000000.toInt()) or (ch(16) shl 16) or (ch(8) shl 8) or ch(0)
 }
 
+/** Отсчёт как готовый блок: размер, базовая линия числа от верха блока и отрисовка в точке (левый верхний угол). */
+class CounterBox(val w: Float, val h: Float, val baseline: Float, private val drawAt: (Float, Float) -> Unit) {
+    fun draw(x: Float, y: Float) = drawAt(x, y)
+}
+
+/**
+ * Отсчёт блоком: число (роль counter) и подпись «мин» (роль unit) справа по базовой линии или под числом
+ * (counter.unit), при counter.type surface — на подложке: кругом размера counter.size или по тексту с полями insets.
+ * null — отсчёта сейчас нет (до события больше 90 минут).
+ */
+fun Frame.counterBox(): CounterBox? {
+    if (d.countdownTo == null) return null
+    val cs = th.counter
+    val num = role("counter")
+    val unit = role("unit", "counter")
+    val unitText = if (cs.unit == "none") null else s("unitLabel")
+    val numText = if (unitText == null) counterText() else "${d.minutesLeft ?: 0}"
+    val nt = num.typo
+    val ut = unit.typo
+    val nw = p.width(numText, nt)
+    val nh = p.lineHeight(nt)
+    val nb = p.baseline(0f, nt)
+    val uw = unitText?.let { p.width(it, ut) } ?: 0f
+    val uh = unitText?.let { p.lineHeight(ut) } ?: 0f
+    val ub = unitText?.let { p.baseline(0f, ut) } ?: 0f
+    // Содержимое: ширина, высота и где верх числа и подписи.
+    val cw: Float
+    val ch: Float
+    val numTop: Float
+    val unitTop: Float
+    if (unitText != null && cs.unit == "inline") {
+        val above = max(nb, ub)
+        cw = nw + cs.unitGap + uw
+        ch = above + max(nh - nb, uh - ub)
+        numTop = above - nb
+        unitTop = above - ub
+    } else if (unitText != null) {
+        cw = max(nw, uw)
+        ch = nh + cs.unitGap + uh
+        numTop = 0f
+        unitTop = nh + cs.unitGap
+    } else {
+        cw = nw
+        ch = nh
+        numTop = 0f
+        unitTop = 0f
+    }
+    val surface = if (cs.type == "surface") cs.surface else null
+    val (padT, padR, padB, padL) = cs.insets.toList()
+    val bw: Float
+    val bh: Float
+    val ox: Float
+    val oy: Float
+    val size = cs.size
+    when {
+        surface != null && size != null -> {
+            bw = size
+            bh = size
+            ox = (size - cw) / 2f
+            oy = (size - ch) / 2f
+        }
+        surface != null -> {
+            bw = cw + padL + padR
+            bh = ch + padT + padB
+            ox = padL
+            oy = padT
+        }
+        else -> {
+            bw = cw
+            bh = ch
+            ox = 0f
+            oy = 0f
+        }
+    }
+    return CounterBox(bw, bh, oy + numTop + nb) { x, y ->
+        if (surface != null) Backgrounds.draw(p, surface, x, y, x + bw, y + bh, mode)
+        val cx = x + ox
+        val cy = y + oy
+        if (unitText != null && cs.unit == "inline") {
+            p.text(numText, cx, cy + numTop, nt, num.color)
+            p.text(unitText, cx + nw + cs.unitGap, cy + unitTop, ut, unit.color)
+        } else {
+            // Под числом: выравнивание столбика — по роли counter.
+            fun at(width: Float) = when (num.align) {
+                Align.START -> cx
+                Align.END -> cx + cw - width
+                Align.CENTER -> cx + (cw - width) / 2f
+            }
+            p.text(numText, at(nw), cy + numTop, nt, num.color)
+            if (unitText != null) p.text(unitText, at(uw), cy + unitTop, ut, unit.color)
+        }
+    }
+}
+
 // ---------- Иконки ----------
 
 /** Иконка пары по icons стиля: перемена, другой день, тип пары. */
@@ -417,6 +645,16 @@ fun Frame.icon(name: String, x: Float, y: Float, size: Float, color: Int = th.ic
             val n = px.take(4).map { (it as JsonPrimitive).content.toFloat().toInt() }
             val c = ColorExpr.parseHex((px[4] as JsonPrimitive).content) ?: color
             p.rect(x + n[0] * k, y + n[1] * k, x + (n[0] + n[2]) * k, y + (n[1] + n[3]) * k, c)
+        }
+        return
+    }
+    if (def.fill) {
+        p.canvas.withSave {
+            translate(x, y)
+            scale(size / def.viewBox, size / def.viewBox)
+            p.fill.shader = null
+            p.fill.color = color
+            for (data in def.paths) drawPath(PathParser.createPathFromPathData(data), p.fill)
         }
         return
     }

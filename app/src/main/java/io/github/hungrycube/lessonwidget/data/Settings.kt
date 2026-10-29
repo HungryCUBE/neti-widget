@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.core.content.edit
 import io.github.hungrycube.lessonwidget.render.Styles
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 
 /** Настройки приложения. Хранятся только на телефоне. */
@@ -32,6 +34,23 @@ class Settings(context: Context) {
     var lastUpdateCheck: Long
         get() = prefs.getLong("last_update_check", 0L)
         set(value) = prefs.edit { putLong("last_update_check", value) }
+
+    /** Настройки стиля по умолчанию (подложка, затемнение…) — для виджетов без своих. */
+    var defaultOptions: Map<String, String>
+        get() = prefs.getString("default_options", null)
+            ?.let { runCatching { json.decodeFromString(optionsSerializer, it) }.getOrNull() }.orEmpty()
+        set(value) = prefs.edit { putString("default_options", json.encodeToString(optionsSerializer, value)) }
+
+    /** Кадр фото по умолчанию (само фото — WidgetPhotos.DEFAULT). */
+    var defaultPhoto: PhotoFrame
+        get() = prefs.getString("default_photo", null)
+            ?.let { runCatching { json.decodeFromString(PhotoFrame.serializer(), it) }.getOrNull() } ?: PhotoFrame()
+        set(value) = prefs.edit { putString("default_photo", json.encodeToString(PhotoFrame.serializer(), value)) }
+
+    private companion object {
+        val json = Json { ignoreUnknownKeys = true }
+        val optionsSerializer = MapSerializer(String.serializer(), String.serializer())
+    }
 }
 
 /** Настройки одного виджета. null в поле — «как в приложении». */
@@ -41,6 +60,10 @@ data class WidgetConfig(
     val style: String? = null,
     /** 0 — все подгруппы. */
     val subgroup: Int? = null,
+    /** Настройки стиля (подложка, затемнение…). */
+    val options: Map<String, String>? = null,
+    /** Кадр своего фото; само фото — WidgetPhotos.file(<appWidgetId>). */
+    val photo: PhotoFrame? = null,
 )
 
 class WidgetConfigs(context: Context) {

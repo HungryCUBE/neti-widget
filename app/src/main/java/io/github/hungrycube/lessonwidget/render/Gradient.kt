@@ -1,6 +1,7 @@
 package io.github.hungrycube.lessonwidget.render
 
 import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.RadialGradient
 import android.graphics.Shader
 import kotlin.math.abs
@@ -27,6 +28,8 @@ class Gradient(
     /** null — цвета равномерно. */
     val positions: FloatArray?,
     val opacity: Float,
+    /** radial: эллипс по пропорциям прямоугольника (как radial-gradient(ellipse …) в CSS). */
+    val ellipse: Boolean = false,
 ) {
     /** Прозрачность кисти, которой рисуют этот градиент. */
     val paintAlpha: Int get() = (opacity * 255f).roundToInt().coerceIn(0, 255)
@@ -37,18 +40,37 @@ class Gradient(
         if (radial) {
             val cx = l + (center?.getOrNull(0) ?: 0.5f) * w
             val cy = t + (center?.getOrNull(1) ?: 0.5f) * h
-            val base = when (radiusOf) {
-                "width" -> w
-                "height" -> h
-                "min" -> min(w, h)
-                else -> sqrt(w * w + h * h)
+            // Радиусы по горизонтали и вертикали: как у CSS farthest-corner / closest-side или от размера прямоугольника.
+            val (rx, ry) = when (radiusOf) {
+                "farthest", "closest" -> {
+                    val far = radiusOf == "farthest"
+                    val dx = if (far) max(cx - l, r - cx) else min(cx - l, r - cx)
+                    val dy = if (far) max(cy - t, b - cy) else min(cy - t, b - cy)
+                    when {
+                        ellipse && far -> dx * SQRT2 to dy * SQRT2
+                        ellipse -> dx to dy
+                        far -> sqrt(dx * dx + dy * dy).let { it to it }
+                        else -> min(dx, dy).let { it to it }
+                    }
+                }
+                else -> {
+                    val base = when (radiusOf) {
+                        "width" -> w
+                        "height" -> h
+                        "min" -> min(w, h)
+                        else -> sqrt(w * w + h * h)
+                    }
+                    if (ellipse && w > 0f) base to base * h / w else base to base
+                }
             }
-            val rad = max(0.01f, radius * base)
-            return if (positions == null && colors.size == 2) {
+            val rad = max(0.01f, radius * rx)
+            val shader = if (positions == null && colors.size == 2) {
                 RadialGradient(cx, cy, rad, colors[0], colors[1], Shader.TileMode.CLAMP)
             } else {
                 RadialGradient(cx, cy, rad, colors, positions, Shader.TileMode.CLAMP)
             }
+            if (ellipse && rx > 0f && ry != rx) shader.setLocalMatrix(Matrix().apply { setScale(1f, max(0.01f, ry) / rx, cx, cy) })
+            return shader
         }
         val x0: Float
         val y0: Float
@@ -77,6 +99,8 @@ class Gradient(
         }
     }
 }
+
+private const val SQRT2 = 1.4142135f
 
 /** Цвет или градиент: заливка полос, рамок, капли счётчика. */
 class Ink(val color: Int, val gradient: Gradient? = null) {

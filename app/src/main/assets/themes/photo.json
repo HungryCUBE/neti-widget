@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 1,
+  "id": "photo",
+  "name": "Своё фото",
+  "order": 130,
+  "layout": "hero",
+  "tone": "@photo.under | #3B2A6B",
+  "options": {
+    "backing": {
+      "type": "choice",
+      "label": "Подложка под текстом",
+      "values": ["gradient", "glass", "none"],
+      "labels": {"gradient": "Градиент", "glass": "Стекло", "none": "Нет"},
+      "default": "gradient"
+    },
+    "dim": {"type": "range", "label": "Затемнение", "min": 0, "max": 100, "default": "40", "unit": "%"},
+    "blur": {"type": "range", "label": "Размытие фото", "min": 0, "max": 100, "default": "0"},
+    "text": {
+      "type": "choice",
+      "label": "Цвет текста",
+      "values": ["auto", "light", "dark"],
+      "labels": {"auto": "Авто", "light": "Светлый", "dark": "Тёмный"},
+      "default": "auto"
+    },
+    "accent": {"type": "switch", "label": "Акцент из фото", "hint": "Прогресс красится в главный цвет снимка", "default": "on"}
+  },
+  "palette": {
+    "tint": "hsl(@photo.dominant, s: <0.64, l: 0.086) | #100824",
+    "scrimBottom": "@tint/66%",
+    "scrimMid": "@tint/30%",
+    "scrimTop": "@tint/32%",
+    "scrimFlat": "@tint/25%",
+    "text": "#FFFFFF",
+    "secondary": "#FFFFFF/84%",
+    "muted": "#FFFFFF/84%",
+    "accent": "#FFFFFF",
+    "photoAccent": "hsl(@photo.accent, l: >0.62) | @accent",
+    "track": "#FFFFFF/30%",
+    "chip": "#FFFFFF/22%",
+    "glassTint": "hsl(@photo.dominant, s: <0.5, l: 0.16)/30% | #28143C/30%",
+    "glassEdge": "#FFFFFF/25%",
+    "shadowDark": "#000000/35%",
+    "shadowLight": "transparent"
+  },
+  "background": {
+    "radius": 28,
+    "layers": [
+      {
+        "type": "linear",
+        "angle": 180,
+        "stops": [
+          {"color": "#3B2A6B", "at": 0},
+          {"color": "#9A3F78", "at": 0.26},
+          {"color": "#E2755F", "at": 0.46},
+          {"color": "#FFBF7A", "at": 0.56},
+          {"color": "#3A3F74", "at": 0.565},
+          {"color": "#22295A", "at": 0.72},
+          {"color": "#10163A", "at": 1}
+        ]
+      },
+      {
+        "type": "radial",
+        "center": [0.64, 0.56],
+        "radiusOf": "farthest",
+        "stops": [
+          {"color": "#FFF6D0", "at": 0},
+          {"color": "#FFD27A", "at": 0.05},
+          {"color": "#FFAA5A/50%", "at": 0.1},
+          {"color": "#FFAA5A/0", "at": 0.22}
+        ]
+      },
+      {"type": "photo", "blur": 30, "blurFrom": "blur"},
+      {
+        "type": "linear",
+        "angle": 0,
+        "opacityFrom": "dim",
+        "stops": [{"color": "@scrimBottom", "at": 0}, {"color": "@scrimMid", "at": 0.45}, {"color": "@tint/0", "at": 0.72}]
+      },
+      {
+        "type": "linear",
+        "angle": 180,
+        "opacityFrom": "dim",
+        "stops": [{"color": "@scrimTop", "at": 0}, {"color": "@tint/0", "at": 0.3}]
+      }
+    ],
+    "shadows": [{"dy": 12, "blur": 28, "color": "#000000/35%", "when": "preview"}]
+  },
+  "surfaces": {"chip": {"corners": "999", "layers": [{"type": "solid", "color": "@chip"}]}},
+  "typography": {
+    "defaults": {
+      "font": "manrope",
+      "lineHeight": 0,
+      "shadows": [{"dy": 1, "blur": 2, "color": "@shadowDark"}, {"blur": 1, "color": "@shadowLight"}]
+    },
+    "header": {"size": 11, "weight": 700, "color": "@text", "shadows": []},
+    "headerRight": {"size": 12, "weight": 600, "color": "@secondary"},
+    "title": {"size": 26, "weight": 800, "letterSpacing": -0.03, "lineHeight": 1.1, "color": "@text"},
+    "details": {"size": 12, "weight": 600, "color": "@secondary"},
+    "next": {"size": 11.5, "weight": 600, "color": "@secondary"},
+    "counter": {"size": 26, "weight": 700, "letterSpacing": -0.03, "lineHeight": 1.1, "color": "@text"},
+    "unit": {"size": 12, "weight": 600, "color": "@secondary"},
+    "agendaHeader": {"size": 11, "weight": 700, "color": "@secondary"},
+    "agendaRow": {"size": 12, "weight": 600, "color": "@text"}
+  },
+  "spacing": {"top": 14, "side": 18, "bottom": 14},
+  "flags": {"chip": true, "anchorBottom": true},
+  "metrics": {"chipPadX": 9, "chipPadY": 3, "counterGap": 12, "progressGap": 9, "nextGap": 8},
+  "progress": {"type": "line", "height": 4, "radius": 2, "track": "@track", "fill": "@photoAccent"},
+  "counter": {"type": "text", "unit": "inline", "unitGap": 3, "placement": "inline"},
+  "agenda": {"text": "@text", "muted": "@secondary", "accent": "@photoAccent"},
+  "strings": {
+    "heroHeaderRight": "{until}",
+    "details": "Ауд. {room}",
+    "detailsNextDay": ["Ауд. {room}", "{type}"],
+    "panelChip": "{numLabel}"
+  },
+  "backdrop": {"layers": [{"type": "linear", "angle": 160, "stops": ["#4A4E5A", "#2B2E36"]}]},
+  "variants": {
+    "compact": {
+      "counter": {"placement": "header"},
+      "typography": {"title": {"size": 21}, "counter": {"size": 20}, "unit": {"size": 11}}
+    },
+    "large": {
+      "background": {
+        "layers": [
+          {
+            "type": "linear",
+            "angle": 180,
+            "stops": [
+              {"color": "#3B2A6B", "at": 0},
+              {"color": "#9A3F78", "at": 0.26},
+              {"color": "#E2755F", "at": 0.46},
+              {"color": "#FFBF7A", "at": 0.56},
+              {"color": "#3A3F74", "at": 0.565},
+              {"color": "#22295A", "at": 0.72},
+              {"color": "#10163A", "at": 1}
+            ]
+          },
+          {"type": "photo", "blur": 30, "blurFrom": "blur"},
+          {
+            "type": "linear",
+            "angle": 180,
+            "opacityFrom": "dim",
+            "stops": [{"color": "@scrimTop", "at": 0}, {"color": "@scrimBottom", "at": 0.5}, {"color": "@scrimBottom", "at": 1}]
+          }
+        ]
+      }
+    },
+    "tone:light": {
+      "palette": {
+        "tint": "#FFFFFF",
+        "scrimBottom": "#FFFFFF/72%",
+        "scrimMid": "#FFFFFF/32%",
+        "scrimTop": "#FFFFFF/40%",
+        "text": "#17212C",
+        "secondary": "#17212C/76%",
+        "muted": "#17212C/76%",
+        "accent": "#17212C",
+        "photoAccent": "hsl(@photo.accent, l: <0.35) | @accent",
+        "track": "#17212C/16%",
+        "chip": "#FFFFFF/60%",
+        "glassTint": "#FFFFFF/50%",
+        "glassEdge": "#FFFFFF/70%",
+        "shadowDark": "transparent",
+        "shadowLight": "#FFFFFF/60%"
+      }
+    },
+    "backing:glass": {
+      "layout": "panel",
+      "background": {
+        "layers": [
+          {
+            "type": "linear",
+            "angle": 180,
+            "stops": [
+              {"color": "#3B2A6B", "at": 0},
+              {"color": "#9A3F78", "at": 0.26},
+              {"color": "#E2755F", "at": 0.46},
+              {"color": "#FFBF7A", "at": 0.56},
+              {"color": "#3A3F74", "at": 0.565},
+              {"color": "#22295A", "at": 0.72},
+              {"color": "#10163A", "at": 1}
+            ]
+          },
+          {
+            "type": "radial",
+            "center": [0.64, 0.56],
+            "radiusOf": "farthest",
+            "stops": [
+              {"color": "#FFF6D0", "at": 0},
+              {"color": "#FFD27A", "at": 0.05},
+              {"color": "#FFAA5A/50%", "at": 0.1},
+              {"color": "#FFAA5A/0", "at": 0.22}
+            ]
+          },
+          {"type": "photo", "blur": 30, "blurFrom": "blur"}
+        ]
+      },
+      "surfaces": {
+        "chip": {
+          "corners": "999",
+          "backdropBlur": 14,
+          "saturate": 1.6,
+          "layers": [{"type": "solid", "color": "@glassTint", "opacityFrom": "dim"}],
+          "shadows": [{"spread": 1, "inset": true, "color": "@glassEdge"}]
+        },
+        "panel": {
+          "corners": "21",
+          "backdropBlur": 18,
+          "saturate": 1.6,
+          "layers": [{"type": "solid", "color": "@glassTint", "opacityFrom": "dim"}],
+          "shadows": [{"spread": 1, "inset": true, "color": "@glassEdge"}, {"dy": 1, "inset": true, "color": "@glassEdge"}]
+        }
+      },
+      "typography": {
+        "defaults": {"shadows": []},
+        "header": {"size": 11, "weight": 700},
+        "title": {"size": 19, "weight": 800, "letterSpacing": -0.02, "lineHeight": 1.15},
+        "details": {"size": 11.5, "weight": 600},
+        "next": {"size": 11, "weight": 600},
+        "counter": {"size": 15, "weight": 800, "letterSpacing": -0.02, "lineHeight": 0},
+        "unit": {"size": 10, "weight": 700, "color": "@text"},
+        "agendaHeader": {"shadows": [{"dy": 1, "blur": 2, "color": "@shadowDark"}, {"blur": 1, "color": "@shadowLight"}]},
+        "agendaRow": {"shadows": [{"dy": 1, "blur": 2, "color": "@shadowDark"}, {"blur": 1, "color": "@shadowLight"}]}
+      },
+      "counter": {"type": "surface", "surface": "chip", "insets": [3, 11, 4, 11]},
+      "metrics": {
+        "chipInset": 12,
+        "chipPadX": 10,
+        "chipPadY": 4,
+        "panelInset": 8,
+        "panelPadX": 13,
+        "panelPadTop": 10,
+        "panelPadBottom": 10,
+        "progressGap": 7,
+        "nextGap": 6,
+        "detailsGap": 10
+      },
+      "strings": {"details": ["{room}", "{until}"]}
+    },
+    "backing:none": {
+      "background": {
+        "layers": [
+          {
+            "type": "linear",
+            "angle": 180,
+            "stops": [
+              {"color": "#3B2A6B", "at": 0},
+              {"color": "#9A3F78", "at": 0.26},
+              {"color": "#E2755F", "at": 0.46},
+              {"color": "#FFBF7A", "at": 0.56},
+              {"color": "#3A3F74", "at": 0.565},
+              {"color": "#22295A", "at": 0.72},
+              {"color": "#10163A", "at": 1}
+            ]
+          },
+          {
+            "type": "radial",
+            "center": [0.64, 0.56],
+            "radiusOf": "farthest",
+            "stops": [
+              {"color": "#FFF6D0", "at": 0},
+              {"color": "#FFD27A", "at": 0.05},
+              {"color": "#FFAA5A/50%", "at": 0.1},
+              {"color": "#FFAA5A/0", "at": 0.22}
+            ]
+          },
+          {"type": "photo", "blur": 30, "blurFrom": "blur"},
+          {"type": "solid", "color": "@scrimFlat", "opacityFrom": "dim"}
+        ]
+      },
+      "typography": {
+        "defaults": {"shadows": [{"dy": 1, "blur": 3, "color": "@shadowDark"}, {"blur": 1.5, "color": "@shadowLight"}]}
+      }
+    },
+    "text:light": {
+      "palette": {
+        "tint": "hsl(@photo.dominant, s: <0.64, l: 0.086) | #100824",
+        "scrimBottom": "@tint/66%",
+        "scrimMid": "@tint/30%",
+        "scrimTop": "@tint/32%",
+        "text": "#FFFFFF",
+        "secondary": "#FFFFFF/84%",
+        "muted": "#FFFFFF/84%",
+        "accent": "#FFFFFF",
+        "photoAccent": "hsl(@photo.accent, l: >0.62) | @accent",
+        "track": "#FFFFFF/30%",
+        "chip": "#FFFFFF/22%",
+        "glassTint": "hsl(@photo.dominant, s: <0.5, l: 0.16)/30% | #28143C/30%",
+        "glassEdge": "#FFFFFF/25%",
+        "shadowDark": "#000000/35%",
+        "shadowLight": "transparent"
+      }
+    },
+    "text:dark": {
+      "palette": {
+        "tint": "#FFFFFF",
+        "scrimBottom": "#FFFFFF/72%",
+        "scrimMid": "#FFFFFF/32%",
+        "scrimTop": "#FFFFFF/40%",
+        "text": "#17212C",
+        "secondary": "#17212C/76%",
+        "muted": "#17212C/76%",
+        "accent": "#17212C",
+        "photoAccent": "hsl(@photo.accent, l: <0.35) | @accent",
+        "track": "#17212C/16%",
+        "chip": "#FFFFFF/60%",
+        "glassTint": "#FFFFFF/50%",
+        "glassEdge": "#FFFFFF/70%",
+        "shadowDark": "transparent",
+        "shadowLight": "#FFFFFF/60%"
+      }
+    },
+    "accent:off": {"progress": {"fill": "@accent"}, "agenda": {"accent": "@accent"}}
+  }
+}

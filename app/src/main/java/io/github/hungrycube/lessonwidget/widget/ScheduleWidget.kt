@@ -66,7 +66,10 @@ private fun WidgetContent(context: Context, appWidgetId: Int) {
     val maxPixels = bitmapBudget(context, LocalAppWidgetOptions.current)
     val renderer = WidgetRenderer(context)
     fun draw(s: WidgetState) =
-        renderer.render(s.style, s.display, size.width.value, size.height.value, RenderMode.WIDGET, nowMillis = now, maxPixels = maxPixels)
+        renderer.render(
+            s.style, s.display, size.width.value, size.height.value, RenderMode.WIDGET,
+            nowMillis = now, maxPixels = maxPixels, custom = s.custom,
+        )
     // Любая ошибка (битый кэш и т.п.) — показываем «нет данных», а не «Не удалось загрузить виджет».
     val (state, rendered) = runCatching {
         val s = Widgets.state(context, appWidgetId, now)

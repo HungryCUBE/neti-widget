@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "id": "y2k",
+  "name": "Y2K",
+  "order": 120,
+  "layout": "hero",
+  "palette": {
+    "text": "#1A1530",
+    "secondary": "#4A4468",
+    "muted": "#2C2648",
+    "accent": "#B69CFF",
+    "track": "#FFFFFF/65%"
+  },
+  "background": {
+    "radius": 34,
+    "layers": [
+      {"type": "shape", "box": {"left": 4, "top": 4, "right": 4, "bottom": 4}, "corners": "30", "surface": {
+        "backdropBlur": 26,
+        "saturate": 1.8,
+        "layers": [
+          {"type": "solid", "color": "#FFFFFF/20%"},
+          {"type": "radial", "center": [0.92, 0.2], "radiusOf": "farthest", "stops": [{"color": "#C8EBFF/22%", "at": 0}, {"color": "#C8EBFF/0", "at": 0.5}]},
+          {"type": "linear", "angle": 140, "stops": [{"color": "#FFFFFF/32%", "at": 0}, {"color": "#FFFFFF/0", "at": 0.4}]}
+        ],
+        "shadows": [
+          {"dy": 1, "inset": true, "color": "#FFFFFF/60%"},
+          {"spread": 1, "inset": true, "color": "#FFFFFF/35%"},
+          {"dy": 2, "blur": 5, "inset": true, "color": "#281E50/12%"}
+        ]
+      }}
+    ],
+    "border": {
+      "width": 4,
+      "color": {"type": "linear", "angle": 135, "stops": [
+        {"color": "#FBFBFD", "at": 0}, {"color": "#A6ABB9", "at": 0.2}, {"color": "#F6F7FA", "at": 0.38},
+        {"color": "#737888", "at": 0.58}, {"color": "#ECEDF3", "at": 0.78}, {"color": "#969CAB", "at": 1}
+      ]}
+    },
+    "shadows": [
+      {"dy": 16, "blur": 32, "color": "#3C2878/30%", "when": "preview"}
+    ]
+  },
+  "surfaces": {
+    "track": {
+      "corners": "5",
+      "layers": [{"type": "solid", "color": "@track"}],
+      "border": {"width": 1, "color": "#50468C/25%"},
+      "shadows": [{"dy": 1, "blur": 2, "inset": true, "color": "#281E50/20%"}]
+    },
+    "fill": {
+      "corners": "5",
+      "layers": [
+        {"type": "linear", "angle": 90, "stops": [{"color": "#FF9AE6", "at": 0}, {"color": "#B69CFF", "at": 0.35}, {"color": "#7FE3FF", "at": 0.7}, {"color": "#B8FF9C", "at": 1}]},
+        {"type": "linear", "angle": 180, "stops": [{"color": "#FFFFFF/70%", "at": 0}, {"color": "#FFFFFF/0", "at": 0.5}]}
+      ]
+    }
+  },
+  "typography": {
+    "defaults": {"font": "plex_mono_medium", "lineHeight": 0},
+    "header": {"font": "plex_mono_semibold", "size": 10, "weight": 600, "letterSpacing": 0.12, "uppercase": true, "color": "@secondary"},
+    "title": {"font": "unbounded", "size": 21, "weight": 700, "letterSpacing": -0.02, "lineHeight": 1, "color": "@text"},
+    "details": {"size": 10.5, "weight": 500, "letterSpacing": 0.06, "uppercase": true, "color": "@secondary"},
+    "next": {"size": 10, "weight": 500, "letterSpacing": 0.08, "uppercase": true, "color": "@muted"},
+    "counter": {
+      "font": "unbounded", "size": 44, "weight": 800, "letterSpacing": -0.04, "lineHeight": 0.9, "align": "end", "color": "#2A2D42",
+      "fill": {"type": "linear", "angle": 180, "stops": [
+        {"color": "#D4D7E3", "at": 0}, {"color": "#8B91A8", "at": 0.28}, {"color": "#2A2D42", "at": 0.48},
+        {"color": "#4C5169", "at": 0.52}, {"color": "#9FA4B9", "at": 0.72}, {"color": "#3F4359", "at": 1}
+      ]},
+      "shadows": [{"dy": 1, "color": "#FFFFFF"}, {"dy": 2.5, "blur": 2, "color": "#281E50/35%"}]
+    },
+    "unit": {"font": "plex_mono_semibold", "size": 9, "weight": 600, "letterSpacing": 0.2, "uppercase": true, "color": "@secondary"}
+  },
+  "spacing": {"top": 16, "side": 20, "bottom": 15},
+  "metrics": {"headerGap": 8, "detailsGap": 5, "counterGap": 10, "nextGap": 8, "headerIcon": 13},
+  "progress": {"type": "line", "height": 10, "radius": 5, "trackSurface": "track", "fillSurface": "fill", "fillInset": 1, "track": "@track", "fill": "@accent"},
+  "counter": {"type": "text", "unit": "below", "unitGap": 3, "placement": "side", "valign": "end"},
+  "icons": {
+    "color": "#6B6590",
+    "slots": {"header": "spark"},
+    "custom": {
+      "spark": {"paths": ["M12 0C12.8 8 16 11.2 24 12C16 12.8 12.8 16 12 24C11.2 16 8 12.8 0 12C8 11.2 11.2 8 12 0Z"], "viewBox": 24, "fill": true}
+    }
+  },
+  "agenda": {"text": "@text", "muted": "@secondary", "accent": "#B69CFF"},
+  "strings": {
+    "heroHeaderLesson": "Пара {num2} / {type}",
+    "details": {"first": ["Ауд. {room} → {end}", "до {end}"]},
+    "detailsNextDay": {"first": ["Ауд. {room} → {start}", "в {start}"]},
+    "nextPrefix": "Далее ▸ "
+  },
+  "backdrop": {
+    "layers": [
+      {"type": "solid", "color": "#D8D5EA"},
+      {"type": "radial", "center": [0.2, 0.9], "radiusOf": "farthest", "stops": [{"color": "#FFE0C4", "at": 0}, {"color": "#FFE0C4/0", "at": 0.4}]},
+      {"type": "radial", "center": [0.72, 0.14], "radiusOf": "farthest", "stops": [{"color": "#E2FFCC", "at": 0}, {"color": "#E2FFCC/0", "at": 0.35}]},
+      {"type": "radial", "center": [0.82, 0.72], "radiusOf": "farthest", "stops": [{"color": "#B4EAFF", "at": 0}, {"color": "#B4EAFF/0", "at": 0.45}]},
+      {"type": "radial", "center": [0.22, 0.28], "radiusOf": "farthest", "stops": [{"color": "#F3C2FF", "at": 0}, {"color": "#F3C2FF/0", "at": 0.4}]}
+    ]
+  },
+  "variants": {
+    "compact": {
+      "counter": {"placement": "header"},
+      "typography": {"title": {"size": 17}, "counter": {"size": 30}, "unit": {"size": 8}}
+    }
+  }
+}

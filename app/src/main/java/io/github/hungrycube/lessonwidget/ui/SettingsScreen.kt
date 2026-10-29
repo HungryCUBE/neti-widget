@@ -44,8 +44,11 @@ import io.github.hungrycube.lessonwidget.core.display.WidgetDisplay
 import io.github.hungrycube.lessonwidget.data.ReleaseInfo
 import io.github.hungrycube.lessonwidget.data.Settings
 import io.github.hungrycube.lessonwidget.data.UpdateChecker
+import io.github.hungrycube.lessonwidget.data.WidgetPhotos
 import io.github.hungrycube.lessonwidget.data.humanMessage
 import io.github.hungrycube.lessonwidget.render.Demo
+import io.github.hungrycube.lessonwidget.render.StyleCustom
+import io.github.hungrycube.lessonwidget.render.Styles
 import io.github.hungrycube.lessonwidget.widget.WidgetUpdater
 import io.github.hungrycube.lessonwidget.widget.Widgets
 import kotlinx.coroutines.launch
@@ -88,9 +91,40 @@ fun SettingsScreen(onBack: () -> Unit, onChangeGroup: () -> Unit) {
     var subgroup by remember { mutableIntStateOf(settings.subgroup) }
     var style by remember { mutableStateOf(settings.defaultStyle) }
     var short by remember { mutableStateOf(settings.shortTitles) }
+    // Стиль со своими настройками или фото, который настраивают как стиль по умолчанию.
+    var setupFor by remember { mutableStateOf<String?>(null) }
+    var defaults by remember { mutableStateOf(StyleDraft(settings.defaultOptions, settings.defaultPhoto)) }
 
     fun widgetsChanged() {
         scope.launch { WidgetUpdater.updateAll(context) }
+    }
+
+    setupFor?.let { id ->
+        val draftFile = remember { WidgetPhotos.draft(context, WidgetPhotos.DEFAULT) }
+        StyleSetupScreen(
+            style = Styles.byId(context, id),
+            initial = defaults,
+            currentPhoto = WidgetPhotos.file(context, WidgetPhotos.DEFAULT).takeIf { it.isFile },
+            draftFile = draftFile,
+            widthDp = 316f,
+            heightDp = 168f,
+            display = { now -> previewDisplay(context, group, subgroup.takeIf { it > 0 }, now) },
+            onDone = { d ->
+                if (d.newPhoto?.isFile == true) WidgetPhotos.commitDraft(context, WidgetPhotos.DEFAULT, WidgetPhotos.DEFAULT)
+                settings.defaultOptions = d.options
+                settings.defaultPhoto = d.frame
+                defaults = d.copy(newPhoto = null)
+                style = id
+                settings.defaultStyle = id
+                setupFor = null
+                widgetsChanged()
+            },
+            onBack = {
+                draftFile.delete()
+                setupFor = null
+            },
+        )
+        return
     }
 
     BackHandler(onBack = onBack)
@@ -149,11 +183,36 @@ fun SettingsScreen(onBack: () -> Unit, onChangeGroup: () -> Unit) {
                     selected = style,
                     display = { now -> previewDisplay(context, group, subgroup.takeIf { it > 0 }, now) },
                     onSelect = {
-                        style = it
-                        settings.defaultStyle = it
-                        widgetsChanged()
+                        val st = Styles.byId(context, it)
+                        if (st.usesPhoto || st.options.isNotEmpty()) {
+                            // Стиль станет стилем по умолчанию после «Готово» на экране настройки.
+                            setupFor = it
+                        } else {
+                            style = it
+                            settings.defaultStyle = it
+                            widgetsChanged()
+                        }
                     },
+                    customFor = { st ->
+                        if (!st.usesPhoto && st.options.isEmpty()) {
+                            null
+                        } else {
+                            val photo = if (st.usesPhoto) WidgetPhotos.input(WidgetPhotos.file(context, WidgetPhotos.DEFAULT), defaults.frame) else null
+                            StyleCustom(defaults.options, photo)
+                        }
+                    },
+                    refresh = defaults,
                 )
+                val selected = Styles.byId(context, style)
+                if (selected.usesPhoto || selected.options.isNotEmpty()) {
+                    OutlinedButton(onClick = { setupFor = style }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (selected.usesPhoto) "Фото и настройки стиля" else "Настройки стиля")
+                    }
+                    Text(
+                        "Новый виджет сразу получит это фото и настройки, их можно поменять у каждого виджета отдельно.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
             Section("Виджет отстаёт?") { WidgetLagSection() }
             Section("Обновления") { UpdateSection() }
@@ -179,7 +238,8 @@ fun SettingsScreen(onBack: () -> Unit, onChangeGroup: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
-                    "Шрифты: Manrope, Inter Tight, JetBrains Mono, Roboto Flex, Lora, Doto, Montserrat — SIL Open Font License. Иконки — Lucide (ISC).",
+                    "Шрифты: Manrope, Inter Tight, JetBrains Mono, Roboto Flex, Lora, Doto, Montserrat, Open Sans, Unbounded, " +
+                        "IBM Plex Mono — SIL Open Font License. Иконки — Lucide (ISC).",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 OutlinedButton(onClick = {

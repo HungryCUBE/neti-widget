@@ -10,6 +10,7 @@ import androidx.annotation.VisibleForTesting
 import io.github.hungrycube.lessonwidget.data.CrashLog
 import io.github.hungrycube.lessonwidget.data.ScheduleRepository
 import io.github.hungrycube.lessonwidget.data.WidgetConfigs
+import io.github.hungrycube.lessonwidget.data.WidgetPhotos
 import io.github.hungrycube.lessonwidget.work.RefreshScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,9 +65,12 @@ class ScheduleWidgetReceiver : AppWidgetProvider() {
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         val configs = WidgetConfigs(context)
         appWidgetIds.forEach(configs::remove)
+        // Своё фото удаляется вместе с виджетом.
+        appWidgetIds.forEach { WidgetPhotos.delete(context, "$it") }
         lastJob = runAsync(context, "Удаление виджета") {
             // Кэш группы удаляется, если её больше не использует ни один виджет и не приложение.
             ScheduleRepository(context).deleteUnused(Widgets.groupsInUse(context, excludeIds = appWidgetIds.toSet()))
+            WidgetPhotos.cleanup(context, Widgets.ids(context).toSet() - appWidgetIds.toSet())
             WidgetUpdater.scheduleNext(context)
         }
     }

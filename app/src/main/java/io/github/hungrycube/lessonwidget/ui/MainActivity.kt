@@ -26,11 +26,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import io.github.hungrycube.lessonwidget.data.CrashLog
 import io.github.hungrycube.lessonwidget.data.ScheduleRepository
 import io.github.hungrycube.lessonwidget.data.Settings
 import io.github.hungrycube.lessonwidget.widget.ConfigureActivity
 import io.github.hungrycube.lessonwidget.widget.WidgetUpdater
 import io.github.hungrycube.lessonwidget.widget.Widgets
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /** С чем открыли приложение: тап по виджету передаёт его группу и номер. */
@@ -49,6 +53,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         launchArgs = parse(intent)
         setContent { AppTheme { AppRoot(launchArgs) } }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Обои могли смениться: стили с цветами из обоев пересчитываются при каждом открытии приложения.
+        val app = applicationContext
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            runCatching { WidgetUpdater.updateAll(app) }.onFailure { CrashLog.record(app, "Обновление виджетов при открытии", it) }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

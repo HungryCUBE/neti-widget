@@ -1,13 +1,24 @@
 package io.github.hungrycube.lessonwidget.render
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.text.TextPaint
+import androidx.core.graphics.withSave
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.max
 
 /** Тень под текстом или под заливкой. */
 data class TextShadow(val color: Int, val blur: Float, val dx: Float, val dy: Float)
@@ -27,6 +38,8 @@ data class Typo(
     val shadow: TextShadow? = null,
     val fill: Gradient? = null,
     val underline: Boolean = false,
+    /** Тени как text-shadow в CSS, первая — сверху. */
+    val shadows: List<Shadow> = emptyList(),
 ) {
     fun sized(newSize: Float) = copy(size = newSize)
     fun weighted(newWeight: Int) = copy(weight = newWeight)
@@ -41,15 +54,20 @@ data class FittedText(val typo: Typo, val lines: List<String>, val lineHeight: F
 
 /**
  * Обёртка над Canvas, где все координаты — в dp (холст заранее масштабирован).
- * Текст позиционируется по верху строки, как в вёрстке.
+ * Текст позиционируется по верху строки, как в вёрстке. [bitmap] — картинка под холстом, нужна для размытия под стеклом.
  */
-class Painter(private val context: Context, val canvas: Canvas) {
+class Painter(private val context: Context, val canvas: Canvas, val bitmap: Bitmap? = null) {
 
     private val tp = TextPaint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG)
+
+    /** Отдельная кисть для замеров «line-height: normal», чтобы не сбивать tp посреди рисования строки. */
+    private val metricsPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
     val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
 
-    fun paint(t: Typo, color: Int, size: Float = t.size): TextPaint {
+    fun paint(t: Typo, color: Int, size: Float = t.size): TextPaint = setUp(tp, t, color, size)
+
+    private fun setUp(tp: TextPaint, t: Typo, color: Int, size: Float): TextPaint {
         tp.reset()
         tp.flags = Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG
         val font = FontCache.get(context, t.font)
@@ -68,6 +86,64 @@ class Painter(private val context: Context, val canvas: Canvas) {
         return tp
     }
 
+    /** Сколько пикселей картинки приходится сейчас на один dp (с учётом масштаба холста). */
+    fun deviceScale(): Float {
+        @Suppress("DEPRECATION")
+        return canvas.matrix.mapRadius(1f)
+    }
+
+    /** Тени text-shadow под строкой: копии текста цветом тени со сдвигом и размытием. */
+    private fun drawShadows(s: String, x: Float, baseline: Float, p: TextPaint, t: Typo) {
+        if (t.shadows.isEmpty()) return
+        val sp = TextPaint(p)
+        sp.shader = null
+        sp.clearShadowLayer()
+        sp.isUnderlineText = false
+        for (sh in t.shadows.asReversed()) {
+            sp.color = sh.color
+            sp.maskFilter = Shadows.blurFilter(sh.blur)
+            canvas.drawText(s, x + sh.dx, baseline + sh.dy, sp)
+        }
+    }
+
+    /**
+     * Размывает уже нарисованное внутри [path] (прямоугольник [l]..[b] в dp), как backdrop-filter: blur() saturate() в CSS.
+     * Работает только при рисовании в картинку ([bitmap]); [cssBlur] — как в CSS.
+     */
+    fun blurBehind(path: Path, l: Float, t: Float, r: Float, b: Float, cssBlur: Float, saturate: Float = 1f) {
+        val bmp = bitmap ?: return
+        if (cssBlur <= 0f && saturate == 1f) return
+        @Suppress("DEPRECATION")
+        val m = canvas.matrix
+        val k = m.mapRadius(1f)
+        val sigma = cssBlur / 2f * k
+        val dev = RectF(l, t, r, b).also { m.mapRect(it) }
+        val area = Rect(
+            floor(dev.left - 2 * sigma).toInt().coerceAtLeast(0),
+            floor(dev.top - 2 * sigma).toInt().coerceAtLeast(0),
+            ceil(dev.right + 2 * sigma).toInt().coerceAtMost(bmp.width),
+            ceil(dev.bottom + 2 * sigma).toInt().coerceAtMost(bmp.height),
+        )
+        if (area.width() < 2 || area.height() < 2) return
+        // Сильное размытие считается на уменьшенной копии: на глаз то же, а быстрее в десятки раз.
+        val down = max(1, (sigma / 3f).toInt())
+        val part = Bitmap.createBitmap(bmp, area.left, area.top, area.width(), area.height())
+        val small = Bitmap.createScaledBitmap(part, max(2, area.width() / down), max(2, area.height() / down), true)
+        if (small !== part) part.recycle()
+        Blur.gaussian(small, sigma / down)
+        val inverse = Matrix().also { m.invert(it) }
+        val dst = RectF(area).also { inverse.mapRect(it) }
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC)
+            if (saturate != 1f) colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(saturate) })
+        }
+        canvas.withSave {
+            clipPath(path)
+            drawBitmap(small, null, dst, paint)
+        }
+        small.recycle()
+    }
+
     /** Градиентная заливка текста по прямоугольнику строки. */
     private fun applyFill(p: TextPaint, t: Typo, left: Float, top: Float, w: Float, h: Float) {
         val fill = t.fill ?: return
@@ -80,7 +156,12 @@ class Painter(private val context: Context, val canvas: Canvas) {
     fun width(text: String, t: Typo, size: Float = t.size): Float =
         paint(t, 0, size).measureText(prepare(text, t))
 
-    fun lineHeight(t: Typo, size: Float = t.size): Float = size * t.lineHeight
+    /** Высота строки; lineHeight 0 — как normal в CSS: по метрикам шрифта. */
+    fun lineHeight(t: Typo, size: Float = t.size): Float {
+        if (t.lineHeight > 0f) return size * t.lineHeight
+        val fm = setUp(metricsPaint, t, 0, size).fontMetrics
+        return fm.descent - fm.ascent + fm.leading
+    }
 
     /** Обрезает строку с многоточием по ширине (замером, без TextUtils — одинаково везде). */
     fun ellipsize(text: String, t: Typo, maxWidth: Float, size: Float = t.size): String {
@@ -128,6 +209,7 @@ class Painter(private val context: Context, val canvas: Canvas) {
             Align.END -> x - w
             Align.CENTER -> x - w / 2f
         }
+        drawShadows(s, left, baseline, p, t)
         applyFill(p, t, left, top, w, lh)
         canvas.drawText(s, left, baseline, p)
         return w
@@ -151,6 +233,7 @@ class Painter(private val context: Context, val canvas: Canvas) {
             Align.END -> x - w
             Align.CENTER -> x - w / 2f
         }
+        drawShadows(s, left, baseline, p, t)
         if (t.fill != null) {
             val fm = p.fontMetrics
             applyFill(p, t, left, baseline + fm.ascent, w, fm.descent - fm.ascent)

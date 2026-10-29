@@ -18,6 +18,8 @@ object Layouts {
         "dots" to Frame::dots,
         "retro" to Frame::retro,
         "tags" to Frame::tags,
+        "hero" to Frame::hero,
+        "panel" to Frame::panel,
     )
 
     val ids: Set<String> get() = all.keys
