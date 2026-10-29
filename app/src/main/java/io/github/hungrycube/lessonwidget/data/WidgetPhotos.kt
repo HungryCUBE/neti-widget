@@ -3,15 +3,20 @@ package io.github.hungrycube.lessonwidget.data
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import android.net.Uri
+import android.os.Build
 import android.util.AtomicFile
 import android.util.LruCache
+import androidx.annotation.RequiresApi
 import androidx.exifinterface.media.ExifInterface
 import io.github.hungrycube.lessonwidget.render.PhotoInput
 import kotlinx.serialization.Serializable
 import java.io.File
 import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
 
 /** Кадр своего фото: точка фокуса (центр видимой части в долях фото, как его видно) и отражение. */
 @Serializable
@@ -69,17 +74,47 @@ object WidgetPhotos {
      * Возвращает false, если файл не читается как картинка.
      */
     fun import(context: Context, uri: Uri, dest: File): Boolean {
+        val decoded = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) decodeModern(context, uri) else null
+        val bmp = decoded ?: decodeLegacy(context, uri) ?: return false
+        dest.parentFile?.mkdirs()
+        val af = AtomicFile(dest)
+        val stream = af.startWrite()
+        try {
+            bmp.compress(Bitmap.CompressFormat.JPEG, 90, stream)
+            af.finishWrite(stream)
+        } catch (e: Exception) {
+            af.failWrite(stream)
+            throw e
+        } finally {
+            bmp.recycle()
+        }
+        return true
+    }
+
+    /** Android 9+: ImageDecoder сам поворачивает по EXIF и понимает HEIC. Сразу уменьшает до [MAX_SIDE]. */
+    @RequiresApi(Build.VERSION_CODES.P)
+    private fun decodeModern(context: Context, uri: Uri): Bitmap? = runCatching {
+        ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri)) { decoder, info, _ ->
+            val k = min(1f, MAX_SIDE.toFloat() / max(info.size.width, info.size.height))
+            decoder.setTargetSize(max(1, (info.size.width * k).roundToInt()), max(1, (info.size.height * k).roundToInt()))
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+        }
+    }.onFailure { CrashLog.record(context, "Чтение фото (ImageDecoder)", it) }.getOrNull()
+
+    /** Android 8: BitmapFactory с уменьшением и поворотом по EXIF вручную. */
+    private fun decodeLegacy(context: Context, uri: Uri): Bitmap? = runCatching {
         val resolver = context.contentResolver
+        // С inJustDecodeBounds картинка не создаётся (decodeStream вернёт null) — заполняются только размеры.
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return false
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return false
+        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
         var sample = 1
         while (max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MAX_SIDE) sample *= 2
         val opts = BitmapFactory.Options().apply {
             inSampleSize = sample
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
-        var bmp = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) } ?: return false
+        val bmp = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) } ?: return@runCatching null
         val k = MAX_SIDE.toFloat() / max(bmp.width, bmp.height)
         val m = Matrix()
         if (k < 1f) m.postScale(k, k)
@@ -101,25 +136,12 @@ object WidgetPhotos {
                 m.postScale(-1f, 1f)
             }
         }
-        if (!m.isIdentity) {
-            val out = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
-            if (out !== bmp) bmp.recycle()
-            bmp = out
+        if (m.isIdentity) {
+            bmp
+        } else {
+            Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true).also { if (it !== bmp) bmp.recycle() }
         }
-        dest.parentFile?.mkdirs()
-        val af = AtomicFile(dest)
-        val stream = af.startWrite()
-        try {
-            bmp.compress(Bitmap.CompressFormat.JPEG, 90, stream)
-            af.finishWrite(stream)
-        } catch (e: Exception) {
-            af.failWrite(stream)
-            throw e
-        } finally {
-            bmp.recycle()
-        }
-        return true
-    }
+    }.onFailure { CrashLog.record(context, "Чтение фото", it) }.getOrNull()
 
     /** Копия фото (например, фото по умолчанию для нового виджета). */
     fun copy(from: File, to: File) {

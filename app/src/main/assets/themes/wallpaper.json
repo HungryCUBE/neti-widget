@@ -24,14 +24,26 @@
     "radius": 28,
     "layers": [
       {"type": "solid", "color": "@base"},
-      {"type": "radial", "center": [1, 0], "radiusOf": "farthest", "stops": [{"color": "@spotC", "at": 0}, {"color": "@spotC/0", "at": 0.55}]},
-      {"type": "radial", "center": [1, 1], "radiusOf": "farthest", "stops": [{"color": "@spotB", "at": 0}, {"color": "@spotB/0", "at": 0.6}]},
-      {"type": "radial", "center": [0, 0], "radiusOf": "farthest", "stops": [{"color": "@spotA", "at": 0}, {"color": "@spotA/0", "at": 0.55}]}
+      {
+        "type": "radial",
+        "center": [1, 0],
+        "radiusOf": "farthest",
+        "stops": [{"color": "@spotC", "at": 0}, {"color": "@spotC/0", "at": 0.55}]
+      },
+      {
+        "type": "radial",
+        "center": [1, 1],
+        "radiusOf": "farthest",
+        "stops": [{"color": "@spotB", "at": 0}, {"color": "@spotB/0", "at": 0.6}]
+      },
+      {
+        "type": "radial",
+        "center": [0, 0],
+        "radiusOf": "farthest",
+        "stops": [{"color": "@spotA", "at": 0}, {"color": "@spotA/0", "at": 0.55}]
+      }
     ],
-    "shadows": [
-      {"dy": 1, "inset": true, "color": "@highlight"},
-      {"dy": 12, "blur": 28, "color": "@shade", "when": "preview"}
-    ]
+    "shadows": [{"dy": 1, "inset": true, "color": "@highlight"}, {"dy": 12, "blur": 28, "color": "@shade", "when": "preview"}]
   },
   "typography": {
     "defaults": {"font": "manrope", "lineHeight": 0},
@@ -56,15 +68,30 @@
   "backdrop": {
     "layers": [
       {"type": "linear", "angle": 160, "stops": ["#F4E6D4", "#E8CDB0"]},
-      {"type": "radial", "center": [0.75, 0.15], "radiusOf": "farthest", "stops": [{"color": "#F6DCC0", "at": 0}, {"color": "#00F6DCC0", "at": 0.4}]},
-      {"type": "radial", "center": [0.88, 0.85], "radiusOf": "farthest", "stops": [{"color": "#E9B892", "at": 0}, {"color": "#00E9B892", "at": 0.5}]},
-      {"type": "radial", "center": [0.18, 0.12], "radiusOf": "farthest", "stops": [{"color": "#FFF8EE", "at": 0}, {"color": "#00FFF8EE", "at": 0.45}]}
+      {
+        "type": "radial",
+        "center": [0.75, 0.15],
+        "radiusOf": "farthest",
+        "stops": [{"color": "#F6DCC0", "at": 0}, {"color": "#00F6DCC0", "at": 0.4}]
+      },
+      {
+        "type": "radial",
+        "center": [0.88, 0.85],
+        "radiusOf": "farthest",
+        "stops": [{"color": "#E9B892", "at": 0}, {"color": "#00E9B892", "at": 0.5}]
+      },
+      {
+        "type": "radial",
+        "center": [0.18, 0.12],
+        "radiusOf": "farthest",
+        "stops": [{"color": "#FFF8EE", "at": 0}, {"color": "#00FFF8EE", "at": 0.45}]
+      }
     ]
   },
   "variants": {
     "compact": {
       "counter": {"placement": "header"},
-      "typography": {"title": {"size": 22}, "counter": {"size": 20}, "unit": {"size": 11}}
+      "typography": {"title": {"size": 19}, "counter": {"size": 18}, "unit": {"size": 10.5}}
     },
     "tone:dark": {
       "palette": {
@@ -82,25 +109,50 @@
       "background": {
         "layers": [
           {"type": "solid", "color": "@base"},
-          {"type": "radial", "center": [0.2, 0.1], "radiusOf": "farthest", "stops": [{"color": "@spotC", "at": 0}, {"color": "@spotC/0", "at": 0.5}]},
-          {"type": "radial", "center": [0, 1], "radiusOf": "farthest", "stops": [{"color": "@spotB", "at": 0}, {"color": "@spotB/0", "at": 0.6}]},
-          {"type": "radial", "center": [1, 0], "radiusOf": "farthest", "stops": [{"color": "@spotA", "at": 0}, {"color": "@spotA/0", "at": 0.6}]}
+          {
+            "type": "radial",
+            "center": [0.2, 0.1],
+            "radiusOf": "farthest",
+            "stops": [{"color": "@spotC", "at": 0}, {"color": "@spotC/0", "at": 0.5}]
+          },
+          {
+            "type": "radial",
+            "center": [0, 1],
+            "radiusOf": "farthest",
+            "stops": [{"color": "@spotB", "at": 0}, {"color": "@spotB/0", "at": 0.6}]
+          },
+          {
+            "type": "radial",
+            "center": [1, 0],
+            "radiusOf": "farthest",
+            "stops": [{"color": "@spotA", "at": 0}, {"color": "@spotA/0", "at": 0.6}]
+          }
         ]
       },
       "backdrop": {
         "layers": [
           {"type": "linear", "angle": 180, "stops": ["#0C1122", "#070A14"]},
-          {"type": "radial", "center": [0.12, 0.88], "radiusOf": "farthest", "stops": [{"color": "#1D2B55", "at": 0}, {"color": "#001D2B55", "at": 0.45}]},
-          {"type": "radial", "center": [0.78, 0.18], "radiusOf": "farthest", "stops": [{"color": "#33478A", "at": 0}, {"color": "#0033478A", "at": 0.48}]}
+          {
+            "type": "radial",
+            "center": [0.12, 0.88],
+            "radiusOf": "farthest",
+            "stops": [{"color": "#1D2B55", "at": 0}, {"color": "#001D2B55", "at": 0.45}]
+          },
+          {
+            "type": "radial",
+            "center": [0.78, 0.18],
+            "radiusOf": "farthest",
+            "stops": [{"color": "#33478A", "at": 0}, {"color": "#0033478A", "at": 0.48}]
+          }
         ]
       }
     },
     "tone:vivid": {
       "palette": {
         "base": "contrast(hsl(@seed, dh: -0.14, s: *0.6764, l: 0.498), against: #FFFFFF, min: 4.5)",
-        "spotA": "hsl(@wallpaper.secondary, dh: 0.87, s: *0.7459, l: 0.5216) | hsl(@base, dh: 39.29, s: *1.4138, l: 0.5216)",
+        "spotA": "hsl(@wallpaper.secondary, dh: 0.87, s: *0.7459, l: 0.5216) | hsl(@seed, s: *0.7459, l: 0.5216)",
         "spotB": "hsl(@base, dh: -1.01, s: *1.2229, l: 0.4863)",
-        "spotC": "hsl(@wallpaper.tertiary, dh: -1.3, s: *0.6378, l: 0.498) | hsl(@base, dh: -80.73, s: *1.2089, l: 0.498)",
+        "spotC": "hsl(@wallpaper.tertiary, dh: -1.3, s: *0.6378, l: 0.498) | hsl(@wallpaper.secondary, s: *0.6378, l: 0.498) | hsl(@base, dh: -1.01, s: *1.2229, l: 0.498)",
         "text": "#FFFFFF",
         "secondary": "#FFFFFF/90%",
         "muted": "#FFFFFF/90%",
@@ -112,20 +164,52 @@
       "background": {
         "layers": [
           {"type": "solid", "color": "@base"},
-          {"type": "radial", "center": [0.5, 1.3], "radiusOf": "farthest", "stops": [{"color": "@spotC", "at": 0}, {"color": "@spotC/0", "at": 0.7}]},
-          {"type": "radial", "center": [1, 0.2], "radiusOf": "farthest", "stops": [{"color": "@spotB", "at": 0}, {"color": "@spotB/0", "at": 0.6}]},
-          {"type": "radial", "center": [0, 0], "radiusOf": "farthest", "stops": [{"color": "@spotA", "at": 0}, {"color": "@spotA/0", "at": 0.6}]}
+          {
+            "type": "radial",
+            "center": [0.5, 1.3],
+            "radiusOf": "farthest",
+            "stops": [{"color": "@spotC", "at": 0}, {"color": "@spotC/0", "at": 0.7}]
+          },
+          {
+            "type": "radial",
+            "center": [1, 0.2],
+            "radiusOf": "farthest",
+            "stops": [{"color": "@spotB", "at": 0}, {"color": "@spotB/0", "at": 0.6}]
+          },
+          {
+            "type": "radial",
+            "center": [0, 0],
+            "radiusOf": "farthest",
+            "stops": [{"color": "@spotA", "at": 0}, {"color": "@spotA/0", "at": 0.6}]
+          }
         ]
       },
-      "typography": {
-        "defaults": {"shadows": [{"dy": 1, "blur": 1, "color": "@textShadow"}]}
-      },
+      "typography": {"defaults": {"shadows": [{"dy": 1, "blur": 1, "color": "@textShadow"}]}},
       "backdrop": {
         "layers": [
-          {"type": "linear", "angle": 135, "stops": [{"color": "#FF8A5C", "at": 0}, {"color": "#E8457F", "at": 0.6}, {"color": "#9B4DFF", "at": 1}]},
-          {"type": "radial", "center": [0.55, 1.05], "radiusOf": "farthest", "stops": [{"color": "#7A3CFF", "at": 0}, {"color": "#007A3CFF", "at": 0.6}]},
-          {"type": "radial", "center": [0.88, 0.25], "radiusOf": "farthest", "stops": [{"color": "#FF4F8B", "at": 0}, {"color": "#00FF4F8B", "at": 0.5}]},
-          {"type": "radial", "center": [0.12, 0.18], "radiusOf": "farthest", "stops": [{"color": "#FFBE5C", "at": 0}, {"color": "#00FFBE5C", "at": 0.45}]}
+          {
+            "type": "linear",
+            "angle": 135,
+            "stops": [{"color": "#FF8A5C", "at": 0}, {"color": "#E8457F", "at": 0.6}, {"color": "#9B4DFF", "at": 1}]
+          },
+          {
+            "type": "radial",
+            "center": [0.55, 1.05],
+            "radiusOf": "farthest",
+            "stops": [{"color": "#7A3CFF", "at": 0}, {"color": "#007A3CFF", "at": 0.6}]
+          },
+          {
+            "type": "radial",
+            "center": [0.88, 0.25],
+            "radiusOf": "farthest",
+            "stops": [{"color": "#FF4F8B", "at": 0}, {"color": "#00FF4F8B", "at": 0.5}]
+          },
+          {
+            "type": "radial",
+            "center": [0.12, 0.18],
+            "radiusOf": "farthest",
+            "stops": [{"color": "#FFBE5C", "at": 0}, {"color": "#00FFBE5C", "at": 0.45}]
+          }
         ]
       }
     }

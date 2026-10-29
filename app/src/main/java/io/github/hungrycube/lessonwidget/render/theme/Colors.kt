@@ -167,7 +167,8 @@ object ColorMath {
         val hsl = toHsl(c)
         return when {
             luminance(c) >= 0.4f -> "light"
-            hsl[1] >= 0.5f && hsl[2] >= 0.3f -> "vivid"
+            // Яркие — только заметно насыщенные: приглушённый пейзаж должен давать спокойную карточку.
+            hsl[1] >= 0.65f && hsl[2] >= 0.3f -> "vivid"
             else -> "dark"
         }
     }

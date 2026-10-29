@@ -98,14 +98,23 @@ internal fun Frame.hero() {
     // С anchorBottom отступ над «Далее» нужен и без прогресса, иначе строка прилипает к деталям.
     val gapAboveNext = if (hasBar || anchor) nextGap else 0f
     val fullBottom = (if (hasBar) ph + progressGap else 0f) + gapAboveNext + metaLh + dividerH
-    val showNext = avail >= bodyMin + fullBottom + minSpace
+    var showNext = avail >= bodyMin + fullBottom + minSpace
     val bottomBlock = if (showNext) fullBottom else if (hasBar) ph + progressGap else 0f
     val showDetails = avail >= max(titleMin + detailsLh + detailsGap, counterMin) + bottomBlock + minSpace
     val titleMaxH = avail - bottomBlock - (if (showDetails) detailsLh + detailsGap else 0f) - minSpace
 
     val textR = if (place == "side" || place == "aside") r - bw - cGap else r
     val titleW = if (place == "inline") textR - l - bw - cGap else textR - l
-    val fitted = p.fit(d.title, title.typo, titleW, titleMaxH)
+    var fitted = p.fit(d.title, title.typo, titleW, titleMaxH)
+    // Название обрезалось бы, а без строки «Далее» оно помещается целиком — название важнее (узкий виджет).
+    if (showNext && fitted.lines.last().endsWith("…")) {
+        val freed = fullBottom - (if (hasBar) ph + progressGap else 0f)
+        val whole = p.fit(d.title, title.typo, titleW, titleMaxH + freed)
+        if (!whole.lines.last().endsWith("…")) {
+            fitted = whole
+            showNext = false
+        }
+    }
 
     // Высота блока под шапкой: название (с отсчётом) и детали.
     val titleBaseline = p.baseline(0f, fitted.typo)

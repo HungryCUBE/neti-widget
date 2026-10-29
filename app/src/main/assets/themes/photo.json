@@ -119,7 +119,7 @@
   "variants": {
     "compact": {
       "counter": {"placement": "header"},
-      "typography": {"title": {"size": 21}, "counter": {"size": 20}, "unit": {"size": 11}}
+      "typography": {"title": {"size": 19}, "counter": {"size": 18}, "unit": {"size": 10.5}}
     },
     "large": {
       "background": {

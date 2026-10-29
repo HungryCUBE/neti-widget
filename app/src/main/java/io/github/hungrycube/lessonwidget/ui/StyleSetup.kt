@@ -63,6 +63,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.hungrycube.lessonwidget.core.display.WidgetDisplay
+import io.github.hungrycube.lessonwidget.data.CrashLog
 import io.github.hungrycube.lessonwidget.data.PhotoFrame
 import io.github.hungrycube.lessonwidget.data.WidgetPhotos
 import io.github.hungrycube.lessonwidget.render.PhotoInput
@@ -130,7 +131,11 @@ fun StyleSetupScreen(
         importing = true
         error = null
         scope.launch {
-            val ok = withContext(Dispatchers.IO) { runCatching { WidgetPhotos.import(context, uri, draftFile) }.getOrDefault(false) }
+            val ok = withContext(Dispatchers.IO) {
+                runCatching { WidgetPhotos.import(context, uri, draftFile) }
+                    .onFailure { CrashLog.record(context, "Своё фото: сохранение", it) }
+                    .getOrDefault(false)
+            }
             importing = false
             if (ok) {
                 newPhoto = draftFile
