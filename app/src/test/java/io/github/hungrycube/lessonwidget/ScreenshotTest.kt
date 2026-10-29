@@ -84,7 +84,8 @@ class ScreenshotTest {
         for (st in Styles.all(context)) {
             val bmp = render(st, demo, 316f, 168f, now)
             save("style_${st.id}", bmp)
-            tiles += st.title to bmp
+            // В общую картинку для README стиль со своим фото не идёт: без фото там только пример-заглушка.
+            if (!st.usesPhoto) tiles += st.title to bmp
         }
         save("overview", sheet(tiles, columns = 3))
     }

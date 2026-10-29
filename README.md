@@ -44,7 +44,6 @@
 | ![Терминал](docs/screenshots/style_terminal.png) Терминал | ![Material You](docs/screenshots/style_material.png) Material You | ![Тетрадь](docs/screenshots/style_notebook.png) Тетрадь |
 | ![Nothing](docs/screenshots/style_nothing.png) Nothing | ![Win95](docs/screenshots/style_win95.png) Win95 | ![НЭТИ](docs/screenshots/style_neti.png) НЭТИ |
 | ![Градиент из обоев](docs/screenshots/style_wallpaper.png) Градиент из обоев | ![Frutiger Aero](docs/screenshots/style_frutiger.png) Frutiger Aero | ![Y2K](docs/screenshots/style_y2k.png) Y2K |
-| ![Своё фото](docs/screenshots/style_photo.png) Своё фото | | |
 
 «Стекло» на рабочем столе лежит прямо на обоях — размытия обоев виджеты Android не умеют, поэтому стекло нарисовано имитацией. У «Своего фото» стекло настоящее: виджет размывает своё же фото.
 «Material You» на Android 12+ берёт цвета из обоев.
