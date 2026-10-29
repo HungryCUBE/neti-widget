@@ -86,6 +86,7 @@
   "strings": {
     "heroHeaderLesson": "Пара {num2} / {type}",
     "details": {"first": ["Ауд. {room} → {end}", "до {end}"]},
+    "detailsUpcoming": {"first": ["Ауд. {room} → {start}", "в {start}"]},
     "detailsNextDay": {"first": ["Ауд. {room} → {start}", "в {start}"]},
     "nextPrefix": "Далее ▸ "
   },

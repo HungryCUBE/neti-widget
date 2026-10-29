@@ -212,6 +212,8 @@ class Frame internal constructor(
     fun detailsText(): String = when {
         f == null -> sv("detailsNone")
         nextDay -> sv("detailsNextDay")
+        // До ближайшей пары — своя строка, если стиль её задал (иначе как во время пары).
+        upcoming -> s("detailsUpcoming") ?: sv("details")
         else -> sv("details")
     }
 

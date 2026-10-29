@@ -95,7 +95,9 @@ internal fun Frame.hero() {
     val titleMin = p.lineHeight(title.typo) * 0.86f
     val counterMin = if (place == "side" || place == "aside") box!!.h - (if (inColumn) leftH + headerGap else 0f) else 0f
     val bodyMin = max(titleMin + detailsLh + detailsGap, counterMin)
-    val fullBottom = (if (hasBar) ph + progressGap + nextGap else 0f) + metaLh + dividerH
+    // С anchorBottom отступ над «Далее» нужен и без прогресса, иначе строка прилипает к деталям.
+    val gapAboveNext = if (hasBar || anchor) nextGap else 0f
+    val fullBottom = (if (hasBar) ph + progressGap else 0f) + gapAboveNext + metaLh + dividerH
     val showNext = avail >= bodyMin + fullBottom + minSpace
     val bottomBlock = if (showNext) fullBottom else if (hasBar) ph + progressGap else 0f
     val showDetails = avail >= max(titleMin + detailsLh + detailsGap, counterMin) + bottomBlock + minSpace
@@ -122,8 +124,7 @@ internal fun Frame.hero() {
             p.rect(l, dy, r, dy + 1f, c("divider"))
             th.palette.getOrNull("dividerLight")?.let { p.rect(l, dy + 1f, r, dy + 2f, it) }
         }
-        by -= dividerH
-        if (hasBar) by -= nextGap
+        by -= dividerH + gapAboveNext
     }
     if (hasBar) {
         by -= ph
