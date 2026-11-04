@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -50,9 +51,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -60,6 +66,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.hungrycube.lessonwidget.core.display.WidgetDisplay
@@ -115,17 +123,29 @@ fun StyleSetupScreen(
     val bitmap by produceState<Bitmap?>(null, photoFile, version) {
         value = withContext(Dispatchers.IO) { WidgetPhotos.load(photoFile) }
     }
-    val preview by produceState<ImageBitmap?>(null, bitmap, options, frame, now) {
-        value = withContext(Dispatchers.Default) {
-            val photo = bitmap?.let { PhotoInput(it, frame.focusX, frame.focusY, frame.flip) }
-            runCatching {
-                WidgetRenderer(context).render(
-                    style, display(now), widthDp, heightDp, RenderMode.WIDGET,
-                    nowMillis = now, density = 2f, custom = StyleCustom(options, photo),
-                ).bitmap.asImageBitmap()
-            }.getOrNull()
-        }
+    var dragging by remember { mutableStateOf(false) }
+    fun renderWith(photo: PhotoInput?): ImageBitmap? = runCatching {
+        WidgetRenderer(context).render(
+            style, display(now), widthDp, heightDp, RenderMode.WIDGET,
+            nowMillis = now, density = 2f, custom = StyleCustom(options, photo),
+        ).bitmap.asImageBitmap()
+    }.getOrNull()
+    // Полное превью и кадр, для которого оно нарисовано. Пока палец двигает фото, не перерисовывается:
+    // целиком виджет рисуется сотни миллисекунд, и фото шло бы за пальцем рывками.
+    val preview by produceState<Pair<PhotoFrame, ImageBitmap?>?>(null, bitmap, options, frame, now, dragging) {
+        if (dragging) return@produceState
+        val f = frame
+        value = f to withContext(Dispatchers.Default) { renderWith(bitmap?.let { PhotoInput(it, f.focusX, f.focusY, f.flip) }) }
     }
+    // Текст и подложка без самого фото — поверх фото, которое во время перетаскивания рисуется прямо на экране.
+    val overlay by produceState<ImageBitmap?>(null, bitmap, options, now) {
+        val f = frame
+        value = withContext(Dispatchers.Default) { bitmap?.let { renderWith(PhotoInput(it, f.focusX, f.focusY, f.flip, visible = false)) } }
+    }
+    val photoImage = remember(bitmap) { bitmap?.asImageBitmap() }
+    val cardRadius = remember(style) { style.spec(emptyList()).background.radius }
+    // Пока палец двигает фото или новое превью ещё рисуется — фото на экране и готовые текст с подложкой поверх.
+    val live = style.usesPhoto && photoImage != null && overlay != null && (dragging || preview?.first != frame)
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         importing = true
@@ -180,30 +200,54 @@ fun StyleSetupScreen(
                         Image(it.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, alpha = 0.35f, modifier = Modifier.fillMaxSize())
                     }
                 }
-                val img = preview
-                if (img != null) {
-                    Image(
-                        img,
-                        contentDescription = "Превью виджета",
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp, vertical = 22.dp)
-                            .aspectRatio(aspect, matchHeightConstraintsFirst = true)
-                            .pointerInput(bitmap) {
-                                val bmp = bitmap ?: return@pointerInput
-                                detectDragGestures { change, amount ->
-                                    change.consume()
-                                    // Палец тянет фото: кадр сдвигается в обратную сторону, в пикселях фото.
-                                    val input = PhotoInput(bmp, frame.focusX, frame.focusY, frame.flip)
-                                    val crop = input.crop(aspect)
-                                    val kx = crop.width().toFloat() / size.width / bmp.width
-                                    val ky = crop.height().toFloat() / size.height / bmp.height
-                                    val (x, y) = input.clampFocus(aspect, frame.focusX - amount.x * kx, frame.focusY - amount.y * ky)
-                                    frame = frame.copy(focusX = x, focusY = y)
+                Box(
+                    Modifier
+                        .padding(horizontal = 12.dp, vertical = 22.dp)
+                        .aspectRatio(aspect, matchHeightConstraintsFirst = true)
+                        .pointerInput(bitmap) {
+                            val bmp = bitmap ?: return@pointerInput
+                            detectDragGestures(
+                                onDragStart = { dragging = true },
+                                onDragEnd = { dragging = false },
+                                onDragCancel = { dragging = false },
+                            ) { change, amount ->
+                                change.consume()
+                                // Палец тянет фото: кадр сдвигается в обратную сторону, в пикселях фото.
+                                val input = PhotoInput(bmp, frame.focusX, frame.focusY, frame.flip)
+                                val crop = input.crop(aspect)
+                                val kx = crop.width().toFloat() / size.width / bmp.width
+                                val ky = crop.height().toFloat() / size.height / bmp.height
+                                val (x, y) = input.clampFocus(aspect, frame.focusX - amount.x * kx, frame.focusY - amount.y * ky)
+                                frame = frame.copy(focusX = x, focusY = y)
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val full = preview?.second
+                    if (live) {
+                        val img = photoImage!!
+                        val bmp = bitmap!!
+                        Canvas(Modifier.fillMaxSize()) {
+                            // Тот же кадр, что посчитает виджет, со скруглением карточки.
+                            val c = PhotoInput(bmp, frame.focusX, frame.focusY, frame.flip).crop(aspect)
+                            val r = cardRadius * size.width / widthDp
+                            clipPath(Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r))) }) {
+                                scale(if (frame.flip) -1f else 1f, 1f) {
+                                    drawImage(
+                                        img,
+                                        srcOffset = IntOffset(c.left, c.top),
+                                        srcSize = IntSize(c.width(), c.height()),
+                                        dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                                    )
                                 }
-                            },
-                    )
-                } else {
-                    CircularProgressIndicator()
+                            }
+                        }
+                        overlay?.let { Image(it, contentDescription = "Превью виджета", modifier = Modifier.fillMaxSize()) }
+                    } else if (full != null) {
+                        Image(full, contentDescription = "Превью виджета", modifier = Modifier.fillMaxSize())
+                    } else {
+                        CircularProgressIndicator()
+                    }
                 }
                 if (style.usesPhoto && bitmap != null) {
                     Text(

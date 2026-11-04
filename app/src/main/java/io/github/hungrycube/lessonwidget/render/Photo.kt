@@ -12,8 +12,16 @@ import kotlin.math.sqrt
  * Своё фото виджета: картинка (уже уменьшенная при выборе), точка кадра и отражение.
  * Точка кадра — центр видимой части в долях фото, как его видит человек (уже с отражением).
  * Кадр считается под пропорции виджета при каждой отрисовке: после изменения размера точка остаётся той же.
+ * [visible] = false — фото не рисуется, но его цвета работают: так экран настройки рисует текст и подложку
+ * поверх фото, которое двигает палец.
  */
-class PhotoInput(val bitmap: Bitmap, val focusX: Float = 0.5f, val focusY: Float = 0.5f, val flip: Boolean = false) {
+class PhotoInput(
+    val bitmap: Bitmap,
+    val focusX: Float = 0.5f,
+    val focusY: Float = 0.5f,
+    val flip: Boolean = false,
+    val visible: Boolean = true,
+) {
 
     /** Видимая часть фото (в пикселях исходной картинки) для прямоугольника с пропорцией [aspect], как object-fit: cover. */
     fun crop(aspect: Float): Rect {

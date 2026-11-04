@@ -204,7 +204,7 @@ internal object Backgrounds {
 
     /** Своё фото: кадр под пропорции по точке фокуса, отражение, размытие самого фото (без ореола по краям). */
     private fun photo(p: Painter, layer: Layer.Photo, l: Float, t: Float, r: Float, b: Float) {
-        val ph = layer.photo ?: return
+        val ph = layer.photo?.takeIf { it.visible } ?: return
         val w = r - l
         val h = b - t
         if (w <= 0f || h <= 0f) return
