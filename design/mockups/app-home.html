@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Приложение · Главная</title>
+<!--
+  РЕФЕРЕНС ДИЗАЙНА для neti-widget (статичная копия доски с холста дизайна).
+  Масштаб: 1 css px = 1 dp на Android. Виджет 4×2 = 316×168 dp.
+  Все размеры, цвета, шрифты — в inline style="…". Тексты, время и аудитории — пример, в приложении реальные данные.
+-->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#555}a:hover{color:#222}
+</style>
+<style>
+html,body{margin:0;background:#e6e4de}
+.ref-note{font:500 14px/1.5 system-ui,sans-serif;color:#2b2a27;background:#fff8d6;border-bottom:1px solid #e9dfae;padding:12px 20px}
+.ref-note b{font-weight:700}
+.ref-board{display:inline-block;margin:24px}
+</style>
+</head>
+<body>
+<div class="ref-note"><b>Референс: Приложение · Главная.</b> 1 px = 1 dp · виджет 4×2 = 316×168 dp · данные на макете — пример. <b>ФМА · ЭМ-63 — только пример:</b> в приложении можно выбрать любую группу любого факультета, везде подставляется выбранная.</div>
+<div class="ref-board">
+<div style="width: 948px; height: 990px; box-sizing: border-box; padding: 48px; background: #f2f1ed; font-family: 'Inter Tight', system-ui, sans-serif; display: flex; gap: 72px">
+
+<div style="display: flex; flex-direction: column; gap: 24px">
+<div style="font-size: 15px; font-weight: 600; color: #1a1a1a">Светлая</div>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; border-radius: 44px; background: #fbfaf8; box-shadow: 0 0 0 10px #1c1c1f, 0 24px 50px rgba(0,0,0,0.22); overflow: hidden; color: #17171a; font-variant-numeric: tabular-nums; display: flex; flex-direction: column">
+
+<div style="padding: 30px 22px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15">ФМА · ЭМ-63</span>
+<span style="font-size: 14px; color: #6b6964">9 учебная неделя · нечётная</span>
+</div>
+<div style="display: flex; gap: 8px">
+<button style="width: 44px; height: 44px; border: none; border-radius: 22px; background: #efede8; display: flex; align-items: center; justify-content: center; cursor: pointer" aria-label="Обновить">
+<svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#17171a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg>
+</button>
+<button style="width: 44px; height: 44px; border: none; border-radius: 22px; background: #efede8; display: flex; align-items: center; justify-content: center; cursor: pointer" aria-label="Настройки">
+<svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#17171a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</button>
+</div>
+</div>
+
+<div style="padding: 10px 22px 0; display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 500; color: #77746e">
+<span style="width: 6px; height: 6px; border-radius: 3px; background: #2fa35a"></span>
+<span>Обновлено 18 мин назад</span>
+</div>
+
+<div style="margin: 18px 22px 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 16px; background: #efede8">
+<button style="height: 40px; border: none; border-radius: 12px; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-family: inherit; font-size: 14px; font-weight: 600; color: #17171a; cursor: pointer">Сегодня</button>
+<button style="height: 40px; border: none; border-radius: 12px; background: transparent; font-family: inherit; font-size: 14px; font-weight: 500; color: #6b6964; cursor: pointer">Неделя</button>
+</div>
+
+<div style="padding: 0 22px; display: flex; flex-direction: column">
+
+<div style="display: flex; align-items: baseline; gap: 8px; margin: 24px 0 12px">
+<span style="font-size: 18px; font-weight: 700; letter-spacing: -0.01em">Сегодня</span>
+<span style="font-size: 14px; color: #6b6964">среда, 28 октября</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+
+<div style="display: flex; gap: 16px; padding: 16px 18px; border-radius: 22px; background: #ffffff; box-shadow: inset 0 0 0 1px #ece9e3; opacity: 1">
+<div style="width: 50px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 17px; font-weight: 700; letter-spacing: -0.01em">8:30</span>
+<span style="font-size: 13px; color: #6b6964">10:00</span>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 500; color: #6b6964">
+<span>1 пара</span>
+
+<span style="font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #17171a; color: #ffffff">через 8 ч 26 мин</span>
+
+</div>
+<span style="font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em">Химия</span>
+<span style="font-size: 13.5px; color: #6b6964">Лекция · ауд. 1-402</span>
+
+<span style="font-size: 13px; color: #77746e">Апарнев А. И.</span>
+
+</div>
+</div>
+
+<div style="display: flex; gap: 16px; padding: 16px 18px; border-radius: 22px; background: #ffffff; box-shadow: inset 0 0 0 1px #ece9e3; opacity: 1">
+<div style="width: 50px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 17px; font-weight: 700; letter-spacing: -0.01em">10:15</span>
+<span style="font-size: 13px; color: #6b6964">11:45</span>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 500; color: #6b6964">
+<span>2 пара</span>
+
+</div>
+<span style="font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em">Математический анализ</span>
+<span style="font-size: 13.5px; color: #6b6964">Лекция · ауд. 1-402</span>
+
+<span style="font-size: 13px; color: #77746e">Левина Е. А.</span>
+
+</div>
+</div>
+
+<div style="display: flex; gap: 16px; padding: 16px 18px; border-radius: 22px; background: #ffffff; box-shadow: inset 0 0 0 1px #ece9e3; opacity: 1">
+<div style="width: 50px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 17px; font-weight: 700; letter-spacing: -0.01em">12:00</span>
+<span style="font-size: 13px; color: #6b6964">13:30</span>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 500; color: #6b6964">
+<span>3 пара</span>
+
+</div>
+<span style="font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em">Информационные технологии и основы программирования</span>
+<span style="font-size: 13.5px; color: #6b6964">Лекция · ауд. 2-402</span>
+
+<span style="font-size: 13px; color: #77746e">Дружинина Т. В.</span>
+
+</div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 24px">
+<div style="font-size: 15px; font-weight: 600; color: #1a1a1a">Тёмная</div>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; border-radius: 44px; background: #0f0f11; box-shadow: 0 0 0 10px #000000, 0 24px 50px rgba(0,0,0,0.22); overflow: hidden; color: #f3f2ee; font-variant-numeric: tabular-nums; display: flex; flex-direction: column">
+
+<div style="padding: 30px 22px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15">ФМА · ЭМ-63</span>
+<span style="font-size: 14px; color: #a3a19c">9 учебная неделя · нечётная</span>
+</div>
+<div style="display: flex; gap: 8px">
+<button style="width: 44px; height: 44px; border: none; border-radius: 22px; background: #1f1f23; display: flex; align-items: center; justify-content: center; cursor: pointer" aria-label="Обновить">
+<svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#f3f2ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg>
+</button>
+<button style="width: 44px; height: 44px; border: none; border-radius: 22px; background: #1f1f23; display: flex; align-items: center; justify-content: center; cursor: pointer" aria-label="Настройки">
+<svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#f3f2ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</button>
+</div>
+</div>
+
+<div style="padding: 10px 22px 0; display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 500; color: #8a8883">
+<span style="width: 6px; height: 6px; border-radius: 3px; background: #2fa35a"></span>
+<span>Обновлено 4 ч назад</span>
+</div>
+
+<div style="margin: 18px 22px 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 16px; background: #1f1f23">
+<button style="height: 40px; border: none; border-radius: 12px; background: #34343a; box-shadow: none; font-family: inherit; font-size: 14px; font-weight: 600; color: #f3f2ee; cursor: pointer">Сегодня</button>
+<button style="height: 40px; border: none; border-radius: 12px; background: transparent; font-family: inherit; font-size: 14px; font-weight: 500; color: #a3a19c; cursor: pointer">Неделя</button>
+</div>
+
+<div style="padding: 0 22px; display: flex; flex-direction: column">
+
+<div style="display: flex; align-items: baseline; gap: 8px; margin: 24px 0 12px">
+<span style="font-size: 18px; font-weight: 700; letter-spacing: -0.01em">Сегодня</span>
+<span style="font-size: 14px; color: #a3a19c">вторник, 27 октября</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+
+<div style="display: flex; gap: 16px; padding: 16px 18px; border-radius: 22px; background: #18181b; box-shadow: inset 0 0 0 1px #232327; opacity: 0.6">
+<div style="width: 50px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 17px; font-weight: 700; letter-spacing: -0.01em">12:00</span>
+<span style="font-size: 13px; color: #a3a19c">13:30</span>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 500; color: #a3a19c">
+<span>3 пара</span>
+
+<span style="font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #1f1f23; color: #a3a19c">прошла</span>
+
+</div>
+<span style="font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em">Физическая культура и спорт</span>
+<span style="font-size: 13.5px; color: #a3a19c">ауд. лыжная база</span>
+
+</div>
+</div>
+
+</div>
+
+<div style="display: flex; align-items: baseline; gap: 8px; margin: 24px 0 12px">
+<span style="font-size: 18px; font-weight: 700; letter-spacing: -0.01em">Завтра</span>
+<span style="font-size: 14px; color: #a3a19c">среда, 28 октября</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+
+<div style="display: flex; gap: 16px; padding: 16px 18px; border-radius: 22px; background: #18181b; box-shadow: inset 0 0 0 1px #232327; opacity: 1">
+<div style="width: 50px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 17px; font-weight: 700; letter-spacing: -0.01em">8:30</span>
+<span style="font-size: 13px; color: #a3a19c">10:00</span>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 500; color: #a3a19c">
+<span>1 пара</span>
+
+<span style="font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #f3f2ee; color: #111113">через 8 ч 31 мин</span>
+
+</div>
+<span style="font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em">Химия</span>
+<span style="font-size: 13.5px; color: #a3a19c">Лекция · ауд. 1-402</span>
+
+<span style="font-size: 13px; color: #8a8883">Апарнев А. И.</span>
+
+</div>
+</div>
+
+<div style="display: flex; gap: 16px; padding: 16px 18px; border-radius: 22px; background: #18181b; box-shadow: inset 0 0 0 1px #232327; opacity: 1">
+<div style="width: 50px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 17px; font-weight: 700; letter-spacing: -0.01em">10:15</span>
+<span style="font-size: 13px; color: #a3a19c">11:45</span>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 500; color: #a3a19c">
+<span>2 пара</span>
+
+</div>
+<span style="font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em">Математический анализ</span>
+<span style="font-size: 13.5px; color: #a3a19c">Лекция · ауд. 1-402</span>
+
+<span style="font-size: 13px; color: #8a8883">Левина Е. А.</span>
+
+</div>
+</div>
+
+<div style="display: flex; gap: 16px; padding: 16px 18px; border-radius: 22px; background: #18181b; box-shadow: inset 0 0 0 1px #232327; opacity: 1">
+<div style="width: 50px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 17px; font-weight: 700; letter-spacing: -0.01em">12:00</span>
+<span style="font-size: 13px; color: #a3a19c">13:30</span>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 500; color: #a3a19c">
+<span>3 пара</span>
+
+</div>
+<span style="font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em">Информационные технологии и основы программирования</span>
+<span style="font-size: 13.5px; color: #a3a19c">Лекция · ауд. 2-402</span>
+
+<span style="font-size: 13px; color: #8a8883">Дружинина Т. В.</span>
+
+</div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+</div>
+</body>
+</html>
