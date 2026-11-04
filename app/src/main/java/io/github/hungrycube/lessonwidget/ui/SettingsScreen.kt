@@ -198,7 +198,7 @@ fun SettingsScreen(onBack: () -> Unit, onChangeGroup: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text("Короткие названия", style = Type.itemTitle, color = c.text)
-                            Text("«Матанализ» вместо «Математический анализ»", style = Type.caption, color = c.sec)
+                            Text("На виджете «Мат. анализ» вместо «Математический анализ», в приложении — полные", style = Type.caption, color = c.sec)
                         }
                         AppSwitch(short, onCheckedChange = {
                             short = it
