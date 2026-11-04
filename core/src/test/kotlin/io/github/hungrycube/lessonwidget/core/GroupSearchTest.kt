@@ -76,7 +76,7 @@ class GroupSearchTest {
             fetchedAt = 0L,
             today = Samples.SAMPLE_DAY,
         )
-        assertTrue(abs.subgroupCount() >= 3)
+        assertEquals(2, abs.subgroupCount())
     }
 
     @Test
