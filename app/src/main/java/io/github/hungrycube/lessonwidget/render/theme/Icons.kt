@@ -27,5 +27,6 @@ object Icons {
                 "M3 10h18",
             ),
         ),
+        "plus" to IconSpec(listOf("M5 12h14", "M12 5v14")),
     )
 }

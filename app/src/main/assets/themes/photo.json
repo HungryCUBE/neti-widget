@@ -46,30 +46,6 @@
   "background": {
     "radius": 28,
     "layers": [
-      {
-        "type": "linear",
-        "angle": 180,
-        "stops": [
-          {"color": "#3B2A6B", "at": 0},
-          {"color": "#9A3F78", "at": 0.26},
-          {"color": "#E2755F", "at": 0.46},
-          {"color": "#FFBF7A", "at": 0.56},
-          {"color": "#3A3F74", "at": 0.565},
-          {"color": "#22295A", "at": 0.72},
-          {"color": "#10163A", "at": 1}
-        ]
-      },
-      {
-        "type": "radial",
-        "center": [0.64, 0.56],
-        "radiusOf": "farthest",
-        "stops": [
-          {"color": "#FFF6D0", "at": 0},
-          {"color": "#FFD27A", "at": 0.05},
-          {"color": "#FFAA5A/50%", "at": 0.1},
-          {"color": "#FFAA5A/0", "at": 0.22}
-        ]
-      },
       {"type": "photo", "blur": 30, "blurFrom": "blur"},
       {
         "type": "linear",
@@ -113,7 +89,9 @@
     "heroHeaderRight": "{until}",
     "details": "Ауд. {room}",
     "detailsNextDay": ["Ауд. {room}", "{type}"],
-    "panelChip": "{numLabel}"
+    "panelChip": "{numLabel}",
+    "placeholderTitle": "Своё фото",
+    "placeholderHint": "Нажмите, чтобы выбрать фото"
   },
   "backdrop": {"layers": [{"type": "linear", "angle": 160, "stops": ["#4A4E5A", "#2B2E36"]}]},
   "variants": {
@@ -124,19 +102,6 @@
     "large": {
       "background": {
         "layers": [
-          {
-            "type": "linear",
-            "angle": 180,
-            "stops": [
-              {"color": "#3B2A6B", "at": 0},
-              {"color": "#9A3F78", "at": 0.26},
-              {"color": "#E2755F", "at": 0.46},
-              {"color": "#FFBF7A", "at": 0.56},
-              {"color": "#3A3F74", "at": 0.565},
-              {"color": "#22295A", "at": 0.72},
-              {"color": "#10163A", "at": 1}
-            ]
-          },
           {"type": "photo", "blur": 30, "blurFrom": "blur"},
           {
             "type": "linear",
@@ -169,35 +134,7 @@
     },
     "backing:glass": {
       "layout": "panel",
-      "background": {
-        "layers": [
-          {
-            "type": "linear",
-            "angle": 180,
-            "stops": [
-              {"color": "#3B2A6B", "at": 0},
-              {"color": "#9A3F78", "at": 0.26},
-              {"color": "#E2755F", "at": 0.46},
-              {"color": "#FFBF7A", "at": 0.56},
-              {"color": "#3A3F74", "at": 0.565},
-              {"color": "#22295A", "at": 0.72},
-              {"color": "#10163A", "at": 1}
-            ]
-          },
-          {
-            "type": "radial",
-            "center": [0.64, 0.56],
-            "radiusOf": "farthest",
-            "stops": [
-              {"color": "#FFF6D0", "at": 0},
-              {"color": "#FFD27A", "at": 0.05},
-              {"color": "#FFAA5A/50%", "at": 0.1},
-              {"color": "#FFAA5A/0", "at": 0.22}
-            ]
-          },
-          {"type": "photo", "blur": 30, "blurFrom": "blur"}
-        ]
-      },
+      "background": {"layers": [{"type": "photo", "blur": 30, "blurFrom": "blur"}]},
       "surfaces": {
         "chip": {
           "corners": "999",
@@ -243,30 +180,6 @@
     "backing:none": {
       "background": {
         "layers": [
-          {
-            "type": "linear",
-            "angle": 180,
-            "stops": [
-              {"color": "#3B2A6B", "at": 0},
-              {"color": "#9A3F78", "at": 0.26},
-              {"color": "#E2755F", "at": 0.46},
-              {"color": "#FFBF7A", "at": 0.56},
-              {"color": "#3A3F74", "at": 0.565},
-              {"color": "#22295A", "at": 0.72},
-              {"color": "#10163A", "at": 1}
-            ]
-          },
-          {
-            "type": "radial",
-            "center": [0.64, 0.56],
-            "radiusOf": "farthest",
-            "stops": [
-              {"color": "#FFF6D0", "at": 0},
-              {"color": "#FFD27A", "at": 0.05},
-              {"color": "#FFAA5A/50%", "at": 0.1},
-              {"color": "#FFAA5A/0", "at": 0.22}
-            ]
-          },
           {"type": "photo", "blur": 30, "blurFrom": "blur"},
           {"type": "solid", "color": "@scrimFlat", "opacityFrom": "dim"}
         ]
@@ -315,6 +228,38 @@
         "glassTop": "veil(#FFFFFF/50%, over: @photo.under, text: @text, min: 4.5) | #FFFFFF/50%"
       }
     },
-    "accent:off": {"progress": {"fill": "@accent"}, "agenda": {"accent": "@accent"}}
+    "accent:off": {"progress": {"fill": "@accent"}, "agenda": {"accent": "@accent"}},
+    "photo:none": {
+      "layout": "placeholder",
+      "background": {
+        "radius": 28,
+        "layers": [
+          {"type": "linear", "angle": 160, "stops": ["#3A3E48", "#1F2127"]},
+          {
+            "type": "radial",
+            "center": [0.5, 0],
+            "radiusOf": "farthest",
+            "stops": [{"color": "#FFFFFF/8%", "at": 0}, {"color": "#FFFFFF/0", "at": 0.6}]
+          }
+        ],
+        "shadows": [
+          {"dy": 1, "inset": true, "color": "#FFFFFF/12%"},
+          {"dy": 12, "blur": 28, "color": "#000000/35%", "when": "preview"}
+        ]
+      },
+      "surfaces": {
+        "plus": {
+          "corners": "50%",
+          "layers": [{"type": "solid", "color": "#FFFFFF/10%"}],
+          "shadows": [{"spread": 1, "inset": true, "color": "#FFFFFF/30%"}]
+        }
+      },
+      "icons": {"color": "#FFFFFF"},
+      "typography": {
+        "defaults": {"shadows": []},
+        "title": {"size": 20, "weight": 800, "letterSpacing": -0.02, "lineHeight": 0, "color": "#FFFFFF"},
+        "details": {"size": 12, "weight": 600, "lineHeight": 0, "color": "#FFFFFF/60%"}
+      }
+    }
   }
 }

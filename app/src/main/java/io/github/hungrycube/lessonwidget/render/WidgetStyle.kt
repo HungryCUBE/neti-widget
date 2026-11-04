@@ -59,7 +59,9 @@ class WidgetStyle internal constructor(
             if (o.type == "range") null else "$name:${values[name]}"
         }
         val tone = if (options.isEmpty() && spec(forms).tone == null) null else ThemeLoader.tone(spec(forms + optionForms), sources)
-        return ThemeLoader.resolve(spec(forms + listOfNotNull(tone) + optionForms), sources, assets, widget, values, photo)
+        // Фото ещё не выбрано — последним, поверх подложки и цвета текста, вариант-заглушка photo:none.
+        val noPhoto = ThemeLoader.NO_PHOTO.takeIf { usesPhoto && photo == null }
+        return ThemeLoader.resolve(spec(forms + listOfNotNull(tone) + optionForms + listOfNotNull(noPhoto)), sources, assets, widget, values, photo)
     }
 
     override fun toString() = "WidgetStyle($id)"

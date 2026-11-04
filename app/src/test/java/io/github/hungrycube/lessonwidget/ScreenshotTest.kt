@@ -127,7 +127,7 @@ class ScreenshotTest {
         tiles += "Фото: отражено, кадр вправо" to
             shot(ph, custom = StyleCustom(photo = PhotoInput(riverSunset.bitmap, focusX = 1f, flip = true)))
         tiles += "Фото: стекло на рабочем столе" to shot(ph, RenderMode.WIDGET, StyleCustom(mapOf("backing" to "glass"), nightCity))
-        for (id in listOf("frutiger", "y2k")) {
+        for (id in listOf("frutiger")) {
             val st = Styles.byId(context, id)
             tiles += st.title to shot(st)
             tiles += "${st.title}: рабочий стол" to shot(st, RenderMode.WIDGET)

@@ -62,6 +62,11 @@ import kotlinx.coroutines.launch
 /** Настройка виджета: при добавлении на рабочий стол и по карандашу в приложении. */
 class ConfigureActivity : ComponentActivity() {
 
+    companion object {
+        /** Открыть сразу экран фото и настроек стиля (тап по виджету без фото). */
+        const val EXTRA_STYLE_SETUP = "io.github.hungrycube.lessonwidget.STYLE_SETUP"
+    }
+
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,7 +79,8 @@ class ConfigureActivity : ComponentActivity() {
             finish()
             return
         }
-        setContent { AppTheme { ConfigureScreen(appWidgetId, onDone = ::save, onCancel = ::cancel) } }
+        val setupOnly = intent?.getBooleanExtra(EXTRA_STYLE_SETUP, false) == true
+        setContent { AppTheme { ConfigureScreen(appWidgetId, setupOnly, onDone = ::save, onCancel = ::cancel) } }
     }
 
     private fun cancel() {
@@ -140,7 +146,7 @@ class ConfigureActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ConfigureScreen(appWidgetId: Int, onDone: (WidgetConfig, StyleDraft) -> Unit, onCancel: () -> Unit) {
+private fun ConfigureScreen(appWidgetId: Int, setupOnly: Boolean, onDone: (WidgetConfig, StyleDraft) -> Unit, onCancel: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { Settings(context) }
     val existing = remember { WidgetConfigs(context).get(appWidgetId) }
@@ -154,7 +160,8 @@ private fun ConfigureScreen(appWidgetId: Int, onDone: (WidgetConfig, StyleDraft)
     var draft by remember {
         mutableStateOf(StyleDraft(existing?.options ?: settings.defaultOptions, existing?.photo ?: settings.defaultPhoto))
     }
-    var setup by remember { mutableStateOf(false) }
+    // С виджета без фото — сразу экран фото: «Готово» там сохраняет виджет, «Назад» закрывает.
+    var setup by remember { mutableStateOf(setupOnly) }
     val draftFile = remember { WidgetPhotos.draft(context, "$appWidgetId") }
     val currentPhoto = WidgetPhotos.fileFor(context, appWidgetId)
     val widgetSize = remember { widgetSizeDp(context, appWidgetId) }
@@ -172,9 +179,13 @@ private fun ConfigureScreen(appWidgetId: Int, onDone: (WidgetConfig, StyleDraft)
             display = { now -> previewDisplay(context, g, (subgroup ?: settings.subgroup).takeIf { it > 0 }, now) },
             onDone = {
                 draft = it
-                setup = false
+                if (setupOnly) {
+                    onDone(WidgetConfig(group = if (useAppGroup) null else ownGroup, style = style, subgroup = subgroup), it)
+                } else {
+                    setup = false
+                }
             },
-            onBack = { setup = false },
+            onBack = { if (setupOnly) onCancel() else setup = false },
         )
         return
     }

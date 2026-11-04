@@ -11,6 +11,7 @@ import io.github.hungrycube.lessonwidget.data.CrashLog
 import io.github.hungrycube.lessonwidget.data.ScheduleRepository
 import io.github.hungrycube.lessonwidget.data.WidgetConfigs
 import io.github.hungrycube.lessonwidget.data.WidgetPhotos
+import io.github.hungrycube.lessonwidget.render.theme.WallpaperPalette
 import io.github.hungrycube.lessonwidget.work.RefreshScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -89,6 +90,7 @@ class WidgetEventsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         lastJob = runAsync(context, "Обновление виджета (${intent.action})") {
             if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+                WallpaperPalette.invalidate()
                 RefreshScheduler.ensureDaily(context)
             }
             WidgetUpdater.updateAll(context)

@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import io.github.hungrycube.lessonwidget.data.CrashLog
+import io.github.hungrycube.lessonwidget.render.theme.WallpaperPalette
 import io.github.hungrycube.lessonwidget.data.ScheduleRepository
 import io.github.hungrycube.lessonwidget.data.Settings
 import io.github.hungrycube.lessonwidget.widget.ConfigureActivity
@@ -59,6 +60,7 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         // Обои могли смениться: стили с цветами из обоев пересчитываются при каждом открытии приложения.
         val app = applicationContext
+        WallpaperPalette.invalidate()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             runCatching { WidgetUpdater.updateAll(app) }.onFailure { CrashLog.record(app, "Обновление виджетов при открытии", it) }
         }

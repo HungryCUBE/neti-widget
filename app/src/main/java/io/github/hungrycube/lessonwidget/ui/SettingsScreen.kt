@@ -238,8 +238,8 @@ fun SettingsScreen(onBack: () -> Unit, onChangeGroup: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
-                    "Шрифты: Manrope, Inter Tight, JetBrains Mono, Roboto Flex, Lora, Doto, Montserrat, Open Sans, Unbounded, " +
-                        "IBM Plex Mono — SIL Open Font License. Иконки — Lucide (ISC).",
+                    "Шрифты: Manrope, Inter Tight, JetBrains Mono, Roboto Flex, Lora, Doto, Montserrat, Open Sans — " +
+                        "SIL Open Font License. Иконки — Lucide (ISC).",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 OutlinedButton(onClick = {

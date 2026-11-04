@@ -14,6 +14,7 @@ import androidx.work.WorkerParameters
 import io.github.hungrycube.lessonwidget.data.GroupNotFoundException
 import io.github.hungrycube.lessonwidget.data.GroupsRepository
 import io.github.hungrycube.lessonwidget.data.ScheduleRepository
+import io.github.hungrycube.lessonwidget.render.theme.WallpaperPalette
 import io.github.hungrycube.lessonwidget.widget.WidgetUpdater
 import io.github.hungrycube.lessonwidget.widget.Widgets
 import kotlinx.coroutines.delay
@@ -24,6 +25,7 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
 
     override suspend fun doWork(): Result {
         val ctx = applicationContext
+        WallpaperPalette.invalidate()
         val repo = ScheduleRepository(ctx)
         val groups = Widgets.groupsInUse(ctx)
         var failed = false

@@ -6,7 +6,7 @@
 - **следующая пара** и прогресс текущей;
 - перемена, «окно» между парами, конец учебного дня (виджет покажет первую пару следующего дня), выходные, каникулы;
 - **своя группа** у каждого виджета, фильтр по подгруппе;
-- **13 стилей** оформления, в том числе из цветов обоев и со своим фото;
+- **12 стилей** оформления, в том числе из цветов обоев и со своим фото;
 - размеры 4×2, 2×2 и 4×4 (в большом — все пары дня).
 
 ![Все стили](docs/screenshots/overview.png)
@@ -43,7 +43,7 @@
 | ![Стекло](docs/screenshots/style_glass.png) Стекло | ![Минимализм](docs/screenshots/style_minimal.png) Минимализм | ![Тёмный OLED](docs/screenshots/style_oled.png) Тёмный OLED |
 | ![Терминал](docs/screenshots/style_terminal.png) Терминал | ![Material You](docs/screenshots/style_material.png) Material You | ![Тетрадь](docs/screenshots/style_notebook.png) Тетрадь |
 | ![Nothing](docs/screenshots/style_nothing.png) Nothing | ![Win95](docs/screenshots/style_win95.png) Win95 | ![НЭТИ](docs/screenshots/style_neti.png) НЭТИ |
-| ![Градиент из обоев](docs/screenshots/style_wallpaper.png) Градиент из обоев | ![Frutiger Aero](docs/screenshots/style_frutiger.png) Frutiger Aero | ![Y2K](docs/screenshots/style_y2k.png) Y2K |
+| ![Градиент из обоев](docs/screenshots/style_wallpaper.png) Градиент из обоев | ![Frutiger Aero](docs/screenshots/style_frutiger.png) Frutiger Aero | |
 | ![Своё фото](docs/screenshots/style_photo.png) Своё фото: градиент | ![Своё фото, стекло](docs/screenshots/style_photo_glass.png) Своё фото: стекло | ![Своё фото, светлый снимок](docs/screenshots/style_photo_light.png) Своё фото: светлый снимок |
 
 «Стекло» на рабочем столе лежит прямо на обоях — размытия обоев виджеты Android не умеют, поэтому стекло нарисовано имитацией. У «Своего фото» стекло настоящее: виджет размывает своё же фото.

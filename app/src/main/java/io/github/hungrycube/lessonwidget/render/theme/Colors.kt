@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
+import android.os.SystemClock
 import io.github.hungrycube.lessonwidget.render.PhotoInput
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
@@ -28,15 +29,7 @@ class ColorSources(
     private val wallpaperOverride: List<Int?>? = null,
 ) {
     private val wallpaperColors: List<Int?>? by lazy {
-        wallpaperOverride ?: run {
-            val ctx = context
-            if (!live || ctx == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) {
-                null
-            } else {
-                runCatching { WallpaperManager.getInstance(ctx).getWallpaperColors(WallpaperManager.FLAG_SYSTEM) }.getOrNull()
-                    ?.let { listOf(it.primaryColor.toArgb(), it.secondaryColor?.toArgb(), it.tertiaryColor?.toArgb()) }
-            }
-        }
+        wallpaperOverride ?: context?.takeIf { live }?.let { WallpaperPalette.get(it) }
     }
 
     /** Системные цвета Material You: accent1_600, neutral2_50 и т. п. (Android 12+). */
@@ -75,6 +68,39 @@ class ColorSources(
             "topBright" -> ph.topBright(aspect) ?: c
             else -> null
         }
+    }
+}
+
+/**
+ * Цвета обоев от системы. Запрос бывает медленным (система считает их по картинке обоев), поэтому —
+ * не чаще раза в 15 минут. Кэш сбрасывается при открытии приложения, загрузке и ежедневном обновлении:
+ * так новые обои подхватываются без лишних запросов на каждой перерисовке.
+ */
+object WallpaperPalette {
+    private const val TTL_MS = 15 * 60_000L
+
+    @Volatile
+    private var colors: List<Int?>? = null
+
+    @Volatile
+    private var at = 0L
+
+    fun get(context: Context): List<Int?>? {
+        val now = SystemClock.elapsedRealtime()
+        if (at != 0L && now - at < TTL_MS) return colors
+        val fresh = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) {
+            null
+        } else {
+            runCatching { WallpaperManager.getInstance(context.applicationContext).getWallpaperColors(WallpaperManager.FLAG_SYSTEM) }.getOrNull()
+                ?.let { listOf(it.primaryColor.toArgb(), it.secondaryColor?.toArgb(), it.tertiaryColor?.toArgb()) }
+        }
+        colors = fresh
+        at = now
+        return fresh
+    }
+
+    fun invalidate() {
+        at = 0L
     }
 }
 

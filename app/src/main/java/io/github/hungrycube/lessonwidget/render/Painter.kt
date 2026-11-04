@@ -74,8 +74,7 @@ class Painter(private val context: Context, val canvas: Canvas, val bitmap: Bitm
         if (font.system) {
             tp.typeface = Typeface.create(font.typeface, if (t.weight >= 600) Typeface.BOLD else Typeface.NORMAL)
         } else {
-            tp.typeface = font.typeface
-            tp.setFontVariationSettings("'wght' ${t.weight}")
+            tp.typeface = FontCache.weighted(context, t.font, t.weight)
         }
         tp.textSize = size
         tp.color = color

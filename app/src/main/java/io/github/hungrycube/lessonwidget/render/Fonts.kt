@@ -2,6 +2,7 @@ package io.github.hungrycube.lessonwidget.render
 
 import android.content.Context
 import android.graphics.Typeface
+import android.text.TextPaint
 import androidx.core.content.res.ResourcesCompat
 import io.github.hungrycube.lessonwidget.R
 import java.io.File
@@ -23,6 +24,9 @@ object FontCache {
         "monospace" to Typeface.MONOSPACE,
     )
     private val cache = HashMap<String, LoadedFont>()
+
+    /** Вариативный шрифт с выставленной осью wght — один на пару (шрифт, жирность). */
+    private val weighted = HashMap<String, Typeface>()
 
     /** Папки со шрифтами импортированных стилей. */
     @Volatile
@@ -59,5 +63,21 @@ object FontCache {
     }
 
     /** Сбросить кэш, например после импорта стиля со своим шрифтом. */
-    fun clear() = synchronized(cache) { cache.clear() }
+    /**
+     * Шрифт нужной жирности. Paint.setFontVariationSettings создаёт новый Typeface при каждом вызове,
+     * а строк и замеров на одну отрисовку — сотни; поэтому готовый шрифт берётся из кэша.
+     */
+    fun weighted(context: Context, name: String, weight: Int): Typeface = synchronized(cache) {
+        weighted.getOrPut("$name#$weight") {
+            val paint = TextPaint()
+            paint.typeface = get(context, name).typeface
+            paint.setFontVariationSettings("'wght' $weight")
+            paint.typeface
+        }
+    }
+
+    fun clear() = synchronized(cache) {
+        cache.clear()
+        weighted.clear()
+    }
 }

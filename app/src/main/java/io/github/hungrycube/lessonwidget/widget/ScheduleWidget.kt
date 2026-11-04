@@ -32,6 +32,7 @@ import io.github.hungrycube.lessonwidget.core.display.DisplayBuilder
 import io.github.hungrycube.lessonwidget.core.display.Phase
 import io.github.hungrycube.lessonwidget.data.CrashLog
 import io.github.hungrycube.lessonwidget.render.RenderMode
+import io.github.hungrycube.lessonwidget.render.Rendered
 import io.github.hungrycube.lessonwidget.render.Styles
 import io.github.hungrycube.lessonwidget.render.WidgetRenderer
 import io.github.hungrycube.lessonwidget.ui.MainActivity
@@ -65,13 +66,16 @@ private fun WidgetContent(context: Context, appWidgetId: Int) {
     val now = WidgetUpdater.now()
     val maxPixels = bitmapBudget(context, LocalAppWidgetOptions.current)
     val renderer = WidgetRenderer(context)
-    fun draw(s: WidgetState) =
-        renderer.render(
+    fun draw(s: WidgetState): Rendered {
+        WidgetUpdater.step("рисую ${s.style.id} ${size.width.value.toInt()}×${size.height.value.toInt()}")
+        return renderer.render(
             s.style, s.display, size.width.value, size.height.value, RenderMode.WIDGET,
             nowMillis = now, maxPixels = maxPixels, custom = s.custom,
         )
+    }
     // Любая ошибка (битый кэш и т.п.) — показываем «нет данных», а не «Не удалось загрузить виджет».
     val (state, rendered) = runCatching {
+        WidgetUpdater.step("состояние виджета")
         val s = Widgets.state(context, appWidgetId, now)
         s to draw(s)
     }.getOrElse {
@@ -79,7 +83,10 @@ private fun WidgetContent(context: Context, appWidgetId: Int) {
         val s = WidgetState(appWidgetId, null, Styles.fallback(context), null, DisplayBuilder.build(null, "—", null, now))
         s to draw(s)
     }
-    val action = if (state.group != null && state.display.phase == Phase.NO_DATA) {
+    val action = if (state.style.usesPhoto && state.custom?.photo == null) {
+        // Стиль со своим фото, а фото ещё нет (виджет показывает заглушку) — сразу на выбор фото.
+        actionStartActivity(photoSetupIntent(context, appWidgetId))
+    } else if (state.group != null && state.display.phase == Phase.NO_DATA) {
         actionRunCallback<RefreshAction>()
     } else {
         actionStartActivity(openAppIntent(context, appWidgetId, state.group))
@@ -117,6 +124,16 @@ fun openAppIntent(context: Context, appWidgetId: Int, group: String?): Intent =
         putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
         group?.let { putExtra(MainActivity.EXTRA_GROUP, it) }
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+
+/** Экран выбора фото и настроек стиля для виджета. */
+fun photoSetupIntent(context: Context, appWidgetId: Int): Intent =
+    Intent(context, ConfigureActivity::class.java).apply {
+        // Свой адрес на каждый виджет, иначе система спутает PendingIntent разных виджетов.
+        data = Uri.parse("lessonwidget://setup/$appWidgetId")
+        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+        putExtra(ConfigureActivity.EXTRA_STYLE_SETUP, true)
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
     }
 
 /** Кнопка «обновить» в состоянии «нет данных». */

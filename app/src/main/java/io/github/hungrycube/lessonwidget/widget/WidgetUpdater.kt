@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.SizeF
 import androidx.annotation.VisibleForTesting
 import androidx.compose.ui.unit.DpSize
@@ -17,6 +18,8 @@ import androidx.glance.appwidget.compose
 import io.github.hungrycube.lessonwidget.core.display.Phase
 import io.github.hungrycube.lessonwidget.core.display.nextRedrawAt
 import io.github.hungrycube.lessonwidget.data.CrashLog
+import io.github.hungrycube.lessonwidget.render.Styles
+import io.github.hungrycube.lessonwidget.render.theme.WallpaperPalette
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -90,23 +93,38 @@ object WidgetUpdater {
      */
     suspend fun renderNow(context: Context, appWidgetId: Int): Boolean = withContext(Dispatchers.Default) {
         val app = context.applicationContext
+        val trace = RenderTrace()
         try {
+            // Разовая работа (чтение всех стилей, цвета обоев) — до таймаута: на «холодном» старте она долгая.
+            trace.step("загрузка стилей")
+            Styles.all(app)
+            WallpaperPalette.get(app)
+            trace.step("подготовка")
             val manager = AppWidgetManager.getInstance(app)
             val glanceId = GlanceAppWidgetManager(app).getGlanceIdBy(appWidgetId)
             val options = manager.getAppWidgetOptions(appWidgetId) ?: Bundle()
+            trace.step("очередь")
             val views = renderLock.withLock {
-                withTimeout(RENDER_TIMEOUT_MS) {
-                    if (hasSize(options)) {
-                        ScheduleWidget().compose(app, glanceId, options = options)
-                    } else {
-                        ScheduleWidget().compose(app, glanceId, size = DEFAULT_SIZE)
+                current = trace
+                try {
+                    withTimeout(RENDER_TIMEOUT_MS) {
+                        trace.step("Glance")
+                        if (hasSize(options)) {
+                            ScheduleWidget().compose(app, glanceId, options = options)
+                        } else {
+                            ScheduleWidget().compose(app, glanceId, size = DEFAULT_SIZE)
+                        }
                     }
+                } finally {
+                    current = null
                 }
             }
+            trace.step("отправка лаунчеру")
             manager.updateAppWidget(appWidgetId, views)
+            if (trace.total() > SLOW_MS) CrashLog.record(app, "Медленная отрисовка виджета $appWidgetId", SlowRender(trace.report()))
             true
         } catch (e: TimeoutCancellationException) {
-            CrashLog.record(app, "Отрисовка виджета $appWidgetId: не уложилась в ${RENDER_TIMEOUT_MS / 1000} с", e)
+            CrashLog.record(app, "Отрисовка виджета $appWidgetId: не уложилась в ${RENDER_TIMEOUT_MS / 1000} с", SlowRender(trace.report(), e))
             false
         } catch (e: CancellationException) {
             throw e
@@ -115,6 +133,44 @@ object WidgetUpdater {
             false
         }
     }
+
+    /** Отрисовка дольше этого попадает в журнал с разбивкой по этапам. */
+    private const val SLOW_MS = 3_000L
+
+    @Volatile
+    private var current: RenderTrace? = null
+
+    /** Отметка этапа внутри отрисовки (вызывается из ScheduleWidget): видно, на чём она застряла. */
+    internal fun step(name: String) {
+        current?.step(name)
+    }
+
+    /** Этапы одной отрисовки и время каждого. */
+    private class RenderTrace {
+        private val start = SystemClock.elapsedRealtime()
+        private var last = start
+        private var phase = "начало"
+        private val done = ArrayList<String>()
+
+        @Synchronized
+        fun step(next: String) {
+            val now = SystemClock.elapsedRealtime()
+            done += "$phase ${now - last} мс"
+            phase = next
+            last = now
+        }
+
+        fun total() = SystemClock.elapsedRealtime() - start
+
+        @Synchronized
+        fun report(): String {
+            val now = SystemClock.elapsedRealtime()
+            return (done.drop(1) + "$phase ${now - last} мс").joinToString(", ") + "; всего ${now - start} мс"
+        }
+    }
+
+    /** Запись в журнал о долгой отрисовке: в тексте — этапы и их время. */
+    private class SlowRender(message: String, cause: Throwable? = null) : Exception(message, cause)
 
     /** Сообщил ли лаунчер размер виджета. Сразу после добавления его может ещё не быть. */
     private fun hasSize(options: Bundle): Boolean {

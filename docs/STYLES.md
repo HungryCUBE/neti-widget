@@ -127,7 +127,7 @@
 | `rules` | горизонтальные линейки: `offset`, `step`, `width`, `color` |
 | `line` | одна линия: `x` (вертикальная) или `y`, `width`, `color` |
 | `band` | наклонная полоса (для подложки превью): `x` в долях, `width`, `angle`, `pivot` |
-| `shape` | фигура внутри карточки, как вложенный блок с `position: absolute`: `box` (`left`, `top`, `right`, `bottom`, `width`, `height` — dp или `"16%"`), `corners` (как `border-radius`), `fill` (цвет или градиент), `surface` — всё, что есть у `background` (свои слои, тени, рамка, размытие). Обрезается по карточке. Так сделаны глянец и блик «Frutiger Aero», внутреннее стекло «Y2K» |
+| `shape` | фигура внутри карточки, как вложенный блок с `position: absolute`: `box` (`left`, `top`, `right`, `bottom`, `width`, `height` — dp или `"16%"`), `corners` (как `border-radius`), `fill` (цвет или градиент), `surface` — всё, что есть у `background` (свои слои, тени, рамка, размытие). Обрезается по карточке. Так сделаны глянец и блик «Frutiger Aero», внутреннее стекло черновика «Y2K» |
 
 `stops` — `[{"color": "#fff", "at": 0}, {"color": "#000", "at": 1}]` или коротко `["#fff", "#000"]`.
 Порядок слоёв обратный CSS: в CSS первый фон — верхний, здесь первый слой — нижний.
@@ -177,7 +177,7 @@
 - `letterSpacing` — в em, `lineHeight` — множитель размера; `0` — как `line-height: normal` в CSS (по метрикам шрифта).
 - `fill` — градиент вместо цвета (хромовый текст); растягивается на высоту строки, как `background-clip: text`.
 - `shadows` — тени как `text-shadow` в CSS: `[{"dx", "dy", "blur", "color"}]`, первая сверху, `[]` — без теней.
-  Хромовые цифры «Y2K» — это `fill` и две тени (светлая снизу на 1 dp и мягкая тёмная).
+  Хромовые цифры черновика «Y2K» (`design/drafts/y2k`) — это `fill` и две тени (светлая снизу на 1 dp и мягкая тёмная).
 - `base` — роль, от которой берутся незаданные поля.
 - `align` — только для `counter`: `start`, `center`, `end`.
 
@@ -213,7 +213,7 @@
 Полоса из подложек (`line`, `thick`, `glossy`, `striped`): `trackSurface` и `fillSurface` — имена из `surfaces`
 (градиенты, тени, блики, рамка — всё как у фона), `fillInset` — отступ заполнения от краёв полосы (рамка внутри),
 `fillClip: true` — заполнение обрезается по полосе и получает прямой правый край. Так сделаны полосы
-«Frutiger Aero» и «Y2K».
+«Frutiger Aero» и черновика «Y2K».
 
 ### Отсчёт (`counter`)
 
@@ -270,8 +270,8 @@
 }
 ```
 
-Встроенные: `book`, `pencil`, `flask`, `coffee`, `calendar` (Lucide). `byType` — по началу
-сокращённого типа пары. `"fill": true` у своей иконки — контуры заливаются, а не обводятся (звёздочка «Y2K»).
+Встроенные: `book`, `pencil`, `flask`, `coffee`, `calendar`, `plus` (Lucide). `byType` — по началу
+сокращённого типа пары. `"fill": true` у своей иконки — контуры заливаются, а не обводятся (звёздочка черновика «Y2K»).
 
 ### Список пар на большом виджете (`agenda`)
 
@@ -301,8 +301,10 @@
 }
 ```
 
-Кроме форм, в `variants` бывают тон фона (`tone:light`, `tone:dark`, `tone:vivid`) и значения настроек
-(`backing:glass`, `accent:off`). Порядок применения: формы размера, потом тон, потом настройки в порядке `options`.
+Кроме форм, в `variants` бывают тон фона (`tone:light`, `tone:dark`, `tone:vivid`), значения настроек
+(`backing:glass`, `accent:off`) и `photo:none` — включается сам у стиля со слоем `photo`, пока фото не выбрано
+(у «Своего фото» это заглушка с плюсом). Порядок применения: формы размера, потом тон, потом настройки в порядке
+`options`, последним `photo:none`.
 Варианты могут менять и `layout` (у «Своего фото» подложка «Стекло» — это раскладка `panel`).
 
 ### Тон фона (`tone`)
@@ -340,13 +342,14 @@
 | `dots` | Nothing | `statusDot` | `hero`, `nextLabel` | `statusDot` 3.5, `heroWidth` 0.5, `progressGap` 10 | `stack`, `nextShort`; `headerRight`, `heroNone`, `sub`, `nextLabel`, `nextTime`, `nextTitle` |
 | `retro` | Win95 | `bevelLight`, `bevelShadow`, `bevelOuterLight`, `bevelOuterDark`, `titleBarStart`, `titleBarEnd`, `titleText` | — | `iconSize` 32, `menuMinWidth` 160 | `typeOptional`; `windowTitle`, `menu`, `button*`, `titleType`, `row*`, `statusNext`; иконки слотов `window`, `document` |
 | `tags` | НЭТИ | `badge`, `tag1`–`tag3`, `rule` | `group`, `unit` | — | `badgeCounter`; `badge`, `atTime`, `tag*` |
-| `hero` | Градиент из обоев, Своё фото, Frutiger Aero, Y2K | `divider`, `dividerLight` — линия над «Далее» | `headerRight`, `unit`, `nextTitle` | `headerGap` 6, `detailsGap` 0, `counterGap` 12, `counterMargin` 0, `progressGap` 9, `nextGap` 10, `dividerGap` 7, `chipPadX` 9, `chipPadY` 3, `headerIcon` 13 | `chip` (шапка на `surfaces.chip`), `anchorBottom` (название и всё ниже прижаты к низу); `heroHeaderLesson`, `heroHeaderRight`, `nextPrefix`; иконка слота `header`. Место отсчёта — `counter.placement`: `inline`, `side`, `aside`, `header` |
+| `hero` | Градиент из обоев, Своё фото, Frutiger Aero (и черновик Y2K) | `divider`, `dividerLight` — линия над «Далее» | `headerRight`, `unit`, `nextTitle` | `headerGap` 6, `detailsGap` 0, `counterGap` 12, `counterMargin` 0, `progressGap` 9, `nextGap` 10, `dividerGap` 7, `chipPadX` 9, `chipPadY` 3, `headerIcon` 13 | `chip` (шапка на `surfaces.chip`), `anchorBottom` (название и всё ниже прижаты к низу); `heroHeaderLesson`, `heroHeaderRight`, `nextPrefix`; иконка слота `header`. Место отсчёта — `counter.placement`: `inline`, `side`, `aside`, `header` |
 | `panel` | Своё фото, «Стекло» | — | — | `chipInset` 12, `chipPadX` 10, `chipPadY` 4, `panelInset` 8, `panelPadX` 13, `panelPadTop` 10, `panelPadBottom` 10, `progressGap` 7, `nextGap` 6, `detailsGap` 10 | `surfaces.chip`, `surfaces.panel`; `panelChip`, `atStart` |
+| `placeholder` | Своё фото без фото | — | — | `plusSize` 44, `plusIcon` 20, `plusGap` 12, `hintGap` 2 | `surfaces.plus` — круг; иконка слота `plus`; `placeholderTitle`, `placeholderHint`. Заглушка вместо расписания: круг с плюсом, заголовок и подсказка по центру |
 
 Полные примеры — сами файлы в `assets/themes/`.
 
 В `hero` отсчёт ставится по `counter.placement`: `inline` — справа от названия по базовой линии («Градиент
-из обоев»), `side` — справа от названия и деталей (`valign: end` — по низу, «Y2K»), `aside` — справа от всего
+из обоев»), `side` — справа от названия и деталей (`valign: end` — по низу, черновик «Y2K»), `aside` — справа от всего
 блока вместе с шапкой (капля «Frutiger Aero»), `header` — в шапке (на 2×2). Если отсчёт по высоте не
 помещается, он становится текстом в шапке справа — на маленьком виджете ничего не обрезается.
 
@@ -362,6 +365,9 @@
 разрешения не нужны), уменьшенная до 1600 px по длинной стороне и повёрнутая по EXIF. Кадр — точка фокуса
 и отражение в настройках виджета; при другом размере виджета кадр пересчитывается под новые пропорции вокруг
 той же точки. Фото удаляется вместе с виджетом и при смене стиля или фото, черновики — при выходе без «Готово».
+
+Пока фото не выбрано, виджет показывает заглушку «Своё фото» с плюсом (вариант `photo:none`, раскладка
+`placeholder`), а тап по нему сразу открывает выбор фото и настройки.
 
 Если «Своё фото» выбрано стилем по умолчанию в настройках приложения, его фото (`default.jpg`) и настройки
 получает каждый новый виджет. На рабочий стол уходит одна картинка виджета: её размер ограничен так же, как

@@ -43,17 +43,17 @@ class ThemeFilesTest {
     @Test
     fun everyAssetThemeLoadsWithoutProblems() {
         val files = context.assets.list("themes")!!.filter { it.endsWith(".json") }
-        assertEquals(13, files.size)
+        assertEquals(12, files.size)
         val styles = Styles.all(context)
         assertEquals("Проблемы в файлах стилей:\n" + Styles.problems(context).joinToString("\n"), emptyList<String>(), Styles.problems(context))
         assertEquals(
-            listOf("glass", "minimal", "oled", "terminal", "material", "notebook", "nothing", "win95", "neti", "wallpaper", "frutiger", "y2k", "photo"),
+            listOf("glass", "minimal", "oled", "terminal", "material", "notebook", "nothing", "win95", "neti", "wallpaper", "frutiger", "photo"),
             styles.map { it.id },
         )
         for (st in styles) {
             assertTrue("${st.id}: нет раскладки ${st.layout}", st.layout in Layouts.ids)
             // Все сочетания форм: шрифты каждой роли существуют.
-            val extra = ThemeLoader.TONES + ThemeLoader.optionForms(st.options)
+            val extra = ThemeLoader.TONES + ThemeLoader.optionForms(st.options) + ThemeLoader.NO_PHOTO
             val sizes = listOf(emptyList(), listOf("short"), listOf("compact"), listOf("large"), listOf("short", "compact"), listOf("compact", "large"))
             for (forms in sizes + sizes.flatMap { s -> extra.map { s + it } }) {
                 val spec = st.spec(forms)

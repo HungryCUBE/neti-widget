@@ -45,6 +45,9 @@ object ThemeLoader {
 
     /** Варианты по тону фона (см. ThemeSpec.tone). */
     val TONES = listOf("tone:light", "tone:dark", "tone:vivid")
+
+    /** Вариант, который включается сам у стиля со слоем photo, пока фото не выбрано. */
+    const val NO_PHOTO = "photo:none"
     val OPTION_TYPES = setOf("choice", "range", "switch")
     private val ALIGNS = setOf("start", "center", "end")
     private val WHEN = setOf("widget", "preview")
@@ -357,7 +360,7 @@ object ThemeLoader {
         }
         if (a.maxScale < 1f) err("adapt.maxScale", "не меньше 1")
         if (a.minScale !in 0.1f..1f) err("adapt.minScale", "от 0.1 до 1")
-        val known = FORMS + TONES + optionForms(spec.options)
+        val known = FORMS + TONES + optionForms(spec.options) + NO_PHOTO
         (spec.variants.keys + rawVariants).filter { it !in known }.toSet()
             .forEach { err("variants", "неизвестный вариант «$it», есть: ${known.joinToString()}") }
         if (spec.tone == null && (spec.variants.keys + rawVariants).any { it in TONES }) err("tone", "варианты tone:… есть, а цвета tone нет")

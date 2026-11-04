@@ -10,4 +10,4 @@
 |---|---|
 | [`style-wallpaper-gradient.html`](style-wallpaper-gradient.html) | «Градиент из обоев» — один стиль на светлых, тёмных и ярких обоях |
 | [`style-own-photo.html`](style-own-photo.html) | «Своё фото» — подложки «Градиент» и «Стекло», экран настройки фото |
-| [`style-frutiger-aero-v2-and-y2k.html`](style-frutiger-aero-v2-and-y2k.html) | «Frutiger Aero» (слева) и «Y2K» (справа) |
+| [`style-frutiger-aero-v2-and-y2k.html`](style-frutiger-aero-v2-and-y2k.html) | «Frutiger Aero» (слева) и «Y2K» (справа; стиль убран из приложения, черновик — [`../drafts/y2k`](../drafts/y2k)) |
