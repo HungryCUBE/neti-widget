@@ -153,7 +153,7 @@ class AppScreenshotTest {
                 widthDp = 316f,
                 heightDp = 168f,
                 display = { now -> previewDisplay(context, "ЭМ-63", null, now) },
-                onDone = {},
+                onChange = {},
                 onBack = {},
             )
         }

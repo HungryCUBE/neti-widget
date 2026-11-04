@@ -29,11 +29,13 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,6 +80,7 @@ import io.github.hungrycube.lessonwidget.ui.design.Segmented
 import io.github.hungrycube.lessonwidget.ui.design.Type
 import io.github.hungrycube.lessonwidget.ui.design.appColors
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -89,7 +92,8 @@ data class StyleDraft(val options: Map<String, String>, val frame: PhotoFrame, v
 /**
  * Настройка стиля для виджета (или для виджетов по умолчанию): своё фото с кадром и настройки стиля из его файла.
  * Превью рисует тот же код, что и виджет, под пропорции виджета [widthDp]×[heightDp].
- * [currentPhoto] — фото, которое уже есть; новое из галереи кладётся в [draftFile] и сохраняется только по «Готово».
+ * [currentPhoto] — фото, которое уже есть; новое из галереи кладётся в [draftFile].
+ * Кнопки «Готово» нет: каждое изменение сразу уходит в [onChange] (кадр — когда палец отпущен), «Назад» просто закрывает.
  */
 @Composable
 fun StyleSetupScreen(
@@ -100,7 +104,7 @@ fun StyleSetupScreen(
     widthDp: Float,
     heightDp: Float,
     display: (Long) -> WidgetDisplay,
-    onDone: (StyleDraft) -> Unit,
+    onChange: (StyleDraft) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -162,15 +166,25 @@ fun StyleSetupScreen(
             }
         }
     }
-    fun done() = onDone(StyleDraft(options, frame, newPhoto))
+    // Изменения применяются сразу; пока палец двигает фото — не дёргаем виджет на каждый пиксель.
+    val change by rememberUpdatedState(onChange)
+    LaunchedEffect(options, frame, newPhoto, version, dragging) {
+        if (dragging) return@LaunchedEffect
+        delay(250)
+        change(StyleDraft(options, frame, newPhoto))
+    }
+    fun close() {
+        onChange(StyleDraft(options, frame, newPhoto))
+        onBack()
+    }
     fun pickPhoto() = picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     // Пока фото нет, превью — заглушка «Нажмите, чтобы выбрать фото»: нажатие в любом месте открывает галерею.
     val tapToPick = style.usesPhoto && bitmap == null && !importing
 
-    BackHandler(onBack = onBack)
+    BackHandler(onBack = ::close)
     val scroll = rememberScrollState()
     Column(Modifier.fillMaxSize().background(c.bg)) {
-        ScreenHeader(style.title, onBack, divider = scroll.value > 0)
+        ScreenHeader(style.title, ::close, divider = scroll.value > 0)
         Column(
             Modifier
                 .weight(1f)
@@ -289,13 +303,7 @@ fun StyleSetupScreen(
                     }
                 }
             }
-            PillButton(
-                "Готово",
-                onClick = ::done,
-                kind = PillKind.Primary,
-                height = Dims.pillTall,
-                modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
-            )
+            Hint("Изменения применяются сразу.", Modifier.padding(top = 20.dp))
         }
     }
 }

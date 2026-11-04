@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,21 +89,29 @@ class ConfigureActivity : ComponentActivity() {
             return
         }
         val setupOnly = intent?.getBooleanExtra(EXTRA_STYLE_SETUP, false) == true
-        setContent { AppTheme { ConfigureScreen(appWidgetId, setupOnly, onDone = ::save, onCancel = ::cancel) } }
+        setContent { AppTheme { ConfigureScreen(appWidgetId, setupOnly, onApply = ::apply, onClose = ::close) } }
     }
 
-    private fun cancel() {
+    /** Хоть раз сохранили — виджет остаётся на рабочем столе. */
+    private var applied = false
+
+    /** Группа, расписание которой уже проверяли после выбора. */
+    private var checkedGroup: String? = null
+
+    private fun close() {
         // Выбранное, но не сохранённое фото не копится.
-        WidgetPhotos.draft(applicationContext, "$appWidgetId").delete()
+        if (!applied) WidgetPhotos.draft(applicationContext, "$appWidgetId").delete()
         finish()
     }
 
-    private fun save(config: WidgetConfig, draft: StyleDraft) {
+    /** Сохраняет настройки виджета и сразу перерисовывает его: кнопки «Готово» нет. */
+    private fun apply(config: WidgetConfig, draft: StyleDraft) {
         val app = applicationContext
         val settings = Settings(app)
         val key = "$appWidgetId"
         val style = Styles.byId(app, config.style ?: settings.defaultStyle)
         try {
+            // Своё фото остаётся, даже если выбрали другой стиль: можно вернуться к нему без повторного выбора.
             if (style.usesPhoto) {
                 val own = WidgetPhotos.file(app, key)
                 val default = WidgetPhotos.file(app, WidgetPhotos.DEFAULT)
@@ -111,13 +120,10 @@ class ConfigureActivity : ComponentActivity() {
                     // Новый виджет со «Своим фото» по умолчанию получает копию этого фото сразу.
                     !own.isFile && default.isFile -> WidgetPhotos.copy(default, own)
                 }
-            } else {
-                WidgetPhotos.delete(app, key)
             }
         } catch (e: Exception) {
             CrashLog.record(app, "Своё фото виджета $appWidgetId", e)
         }
-        WidgetPhotos.draft(app, key).delete()
         WidgetConfigs(app).set(
             appWidgetId,
             config.copy(
@@ -126,15 +132,19 @@ class ConfigureActivity : ComponentActivity() {
             ),
         )
         if (settings.defaultGroup == null && config.group != null) settings.defaultGroup = config.group
+        applied = true
         setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
 
         val id = appWidgetId
         val group = config.group ?: settings.defaultGroup
+        val download = group != null && group != checkedGroup
+        if (download) checkedGroup = group
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                val repo = ScheduleRepository(app)
                 WidgetUpdater.update(app, id)
-                if (group != null && repo.load(group) == null) {
+                if (!download || group == null) return@launch
+                val repo = ScheduleRepository(app)
+                if (repo.load(group) == null) {
                     try {
                         repo.refresh(group)
                     } catch (e: Exception) {
@@ -148,12 +158,11 @@ class ConfigureActivity : ComponentActivity() {
                 CrashLog.record(app, "Настройка виджета $id", e)
             }
         }
-        finish()
     }
 }
 
 @Composable
-private fun ConfigureScreen(appWidgetId: Int, setupOnly: Boolean, onDone: (WidgetConfig, StyleDraft) -> Unit, onCancel: () -> Unit) {
+private fun ConfigureScreen(appWidgetId: Int, setupOnly: Boolean, onApply: (WidgetConfig, StyleDraft) -> Unit, onClose: () -> Unit) {
     val context = LocalContext.current
     val c = appColors
     val settings = remember { Settings(context) }
@@ -168,11 +177,18 @@ private fun ConfigureScreen(appWidgetId: Int, setupOnly: Boolean, onDone: (Widge
     var draft by remember {
         mutableStateOf(StyleDraft(existing?.options ?: settings.defaultOptions, existing?.photo ?: settings.defaultPhoto))
     }
-    // С виджета без фото — сразу экран фото: «Готово» там сохраняет виджет, «Назад» закрывает.
+    // С виджета без фото — сразу экран фото; «Назад» там закрывает настройку.
     var setup by remember { mutableStateOf(setupOnly) }
     val draftFile = remember { WidgetPhotos.draft(context, "$appWidgetId") }
     val currentPhoto = WidgetPhotos.fileFor(context, appWidgetId)
     val widgetSize = remember { widgetSizeDp(context, appWidgetId) }
+
+    // Всё применяется сразу: группа, подгруппа и стиль — как только выбраны.
+    fun config() = WidgetConfig(group = if (useAppGroup) null else ownGroup, style = style, subgroup = subgroup)
+    val hasGroup = (if (useAppGroup) appGroup else ownGroup) != null
+    LaunchedEffect(useAppGroup, ownGroup, style, subgroup) {
+        if (hasGroup) onApply(config(), draft)
+    }
 
     if (setup) {
         val st = Styles.byId(context, style)
@@ -185,15 +201,11 @@ private fun ConfigureScreen(appWidgetId: Int, setupOnly: Boolean, onDone: (Widge
             widthDp = widgetSize.first,
             heightDp = widgetSize.second,
             display = { now -> previewDisplay(context, g, (subgroup ?: settings.subgroup).takeIf { it > 0 }, now) },
-            onDone = {
+            onChange = {
                 draft = it
-                if (setupOnly) {
-                    onDone(WidgetConfig(group = if (useAppGroup) null else ownGroup, style = style, subgroup = subgroup), it)
-                } else {
-                    setup = false
-                }
+                if (hasGroup) onApply(config(), it)
             },
-            onBack = { if (setupOnly) onCancel() else setup = false },
+            onBack = { if (setupOnly) onClose() else setup = false },
         )
         return
     }
@@ -203,7 +215,7 @@ private fun ConfigureScreen(appWidgetId: Int, setupOnly: Boolean, onDone: (Widge
         GroupPickerScreen(
             title = "Группа для виджета",
             current = if (useAppGroup) appGroup else ownGroup,
-            onBack = { if (canBack) picking = false else onCancel() },
+            onBack = { if (canBack) picking = false else onClose() },
             onPicked = {
                 ownGroup = it
                 useAppGroup = false
@@ -217,14 +229,14 @@ private fun ConfigureScreen(appWidgetId: Int, setupOnly: Boolean, onDone: (Widge
     val effectiveSubgroup = (subgroup ?: settings.subgroup).takeIf { it > 0 }
     val subgroups = remember(group) { group?.let { ScheduleRepository(context).load(it) }?.subgroupCount() ?: 0 }
     val scroll = rememberScrollState()
-    BackHandler(onBack = onCancel)
+    BackHandler(onBack = onClose)
     Column(Modifier.fillMaxSize().background(c.bg)) {
         ScreenHeader(
             "Виджет расписания",
-            onBack = onCancel,
+            onBack = onClose,
             divider = scroll.value > 0,
             backIcon = LucideIcons.close,
-            backDescription = "Отмена",
+            backDescription = "Закрыть",
         )
         Column(
             Modifier
@@ -305,17 +317,7 @@ private fun ConfigureScreen(appWidgetId: Int, setupOnly: Boolean, onDone: (Widge
                     )
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                PillButton(
-                    "Готово",
-                    onClick = { onDone(WidgetConfig(group = if (useAppGroup) null else ownGroup, style = style, subgroup = subgroup), draft) },
-                    kind = PillKind.Primary,
-                    height = Dims.pillTall,
-                    enabled = group != null,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Hint("Тап по виджету открывает расписание на сегодня и неделю.")
-            }
+            Hint("Изменения применяются сразу. Тап по виджету открывает расписание на сегодня и неделю.")
         }
     }
 }

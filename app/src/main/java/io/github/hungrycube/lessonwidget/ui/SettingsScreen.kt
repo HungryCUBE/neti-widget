@@ -116,14 +116,14 @@ fun SettingsScreen(onBack: () -> Unit, onChangeGroup: () -> Unit) {
             widthDp = 316f,
             heightDp = 168f,
             display = { now -> previewDisplay(context, group, subgroup.takeIf { it > 0 }, now) },
-            onDone = { d ->
+            // Всё применяется сразу: стиль становится стилем по умолчанию, фото и настройки сохраняются.
+            onChange = { d ->
                 if (d.newPhoto?.isFile == true) WidgetPhotos.commitDraft(context, WidgetPhotos.DEFAULT, WidgetPhotos.DEFAULT)
                 settings.defaultOptions = d.options
                 settings.defaultPhoto = d.frame
                 defaults = d.copy(newPhoto = null)
                 style = id
                 settings.defaultStyle = id
-                setupFor = null
                 widgetsChanged()
             },
             onBack = {
@@ -219,7 +219,7 @@ fun SettingsScreen(onBack: () -> Unit, onChangeGroup: () -> Unit) {
                     onSelect = {
                         val st = Styles.byId(context, it)
                         if (st.usesPhoto || st.options.isNotEmpty()) {
-                            // Стиль станет стилем по умолчанию после «Готово» на экране настройки.
+                            // Стиль со своими настройками или фото — сразу на экран настройки, там он и применяется.
                             setupFor = it
                         } else {
                             style = it
