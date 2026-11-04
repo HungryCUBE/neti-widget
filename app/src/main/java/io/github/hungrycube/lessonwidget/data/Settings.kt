@@ -17,6 +17,15 @@ class Settings(context: Context) {
         get() = prefs.getString("default_group", null)
         set(value) = prefs.edit { putString("default_group", value) }
 
+    /** Последние выбранные группы (в приложении и для виджетов), новые первыми. */
+    var recentGroups: List<String>
+        get() = prefs.getString("recent_groups", null)?.split('|')?.filter { it.isNotBlank() }.orEmpty()
+        set(value) = prefs.edit { putString("recent_groups", value.joinToString("|")) }
+
+    fun addRecent(group: String) {
+        recentGroups = (listOf(group) + recentGroups.filter { it != group }).take(5)
+    }
+
     var defaultStyle: String
         get() = prefs.getString("default_style", Styles.DEFAULT_ID) ?: Styles.DEFAULT_ID
         set(value) = prefs.edit { putString("default_style", value) }

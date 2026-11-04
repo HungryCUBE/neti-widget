@@ -1,41 +1,47 @@
 package io.github.hungrycube.lessonwidget.ui
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.CompositionLocalProvider
+import io.github.hungrycube.lessonwidget.ui.design.DarkColors
+import io.github.hungrycube.lessonwidget.ui.design.LightColors
+import io.github.hungrycube.lessonwidget.ui.design.LocalAppColors
+import io.github.hungrycube.lessonwidget.ui.design.Type
 
-private val Light = lightColorScheme(
-    primary = Color(0xFF0C3B33),
-    onPrimary = Color.White,
-    secondary = Color(0xFF00A861),
-    tertiary = Color(0xFFF5A800),
-    background = Color(0xFFF7F5F2),
-    surface = Color(0xFFF7F5F2),
-)
-
-private val Dark = darkColorScheme(
-    primary = Color(0xFF7FD3B8),
-    secondary = Color(0xFF5BD69A),
-    tertiary = Color(0xFFF5C04D),
-    background = Color(0xFF141311),
-    surface = Color(0xFF141311),
-)
-
+/** Тема приложения: светлая или тёмная, как в системе. Цвета — токены из ui/design/Tokens.kt. */
 @Composable
-fun AppTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
-    val context = LocalContext.current
-    val scheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        dark -> Dark
-        else -> Light
+fun AppTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    val c = if (dark) DarkColors else LightColors
+    // Material-компоненты (ползунок, индикатор загрузки) берут цвета из тех же токенов.
+    val base = if (dark) darkColorScheme() else lightColorScheme()
+    val scheme = base.copy(
+        primary = c.primary,
+        onPrimary = c.onPrimary,
+        background = c.bg,
+        onBackground = c.text,
+        surface = c.bg,
+        onSurface = c.text,
+        surfaceVariant = c.soft,
+        onSurfaceVariant = c.sec,
+        outline = c.cardBorderStrong,
+        outlineVariant = c.cardBorder,
+        secondaryContainer = c.soft,
+        onSecondaryContainer = c.text,
+    )
+    MaterialTheme(colorScheme = scheme) {
+        CompositionLocalProvider(
+            LocalAppColors provides c,
+            LocalContentColor provides c.text,
+            LocalTextStyle provides Type.body,
+            LocalTextSelectionColors provides TextSelectionColors(handleColor = c.primary, backgroundColor = c.primary.copy(alpha = 0.25f)),
+            content = content,
+        )
     }
-    MaterialTheme(colorScheme = scheme, content = content)
 }

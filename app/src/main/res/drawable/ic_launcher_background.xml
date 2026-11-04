@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Фон иконки (design/mockups/icon-v2-1024.png). Эталон 1024 px = видимая область 72 dp, то есть 18…90 dp слоя 108.
+  Диагональный градиент, светлая дымка сверху и две малиновые линии в правом нижнем углу до краёв слоя.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="18"
+                android:startY="18"
+                android:endX="90"
+                android:endY="90">
+                <item android:offset="0" android:color="#FF1AC77E" />
+                <item android:offset="0.5" android:color="#FF00A760" />
+                <item android:offset="1" android:color="#FF095F43" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="54"
+                android:startY="18"
+                android:endX="54"
+                android:endY="53.2">
+                <item android:offset="0" android:color="#24FFFFFF" />
+                <item android:offset="1" android:color="#00FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M61.22,110L110,33.03"
+        android:strokeWidth="1.25"
+        android:strokeColor="#D9D0124F" />
+    <path
+        android:pathData="M69.15,110L110,47.17"
+        android:strokeWidth="0.5"
+        android:strokeColor="#D9D0124F" />
+</vector>

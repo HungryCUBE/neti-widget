@@ -7,27 +7,20 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,8 +28,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import io.github.hungrycube.lessonwidget.core.groups.subgroupCount
 import io.github.hungrycube.lessonwidget.data.CrashLog
 import io.github.hungrycube.lessonwidget.data.ScheduleRepository
 import io.github.hungrycube.lessonwidget.data.Settings
@@ -46,12 +42,24 @@ import io.github.hungrycube.lessonwidget.data.WidgetPhotos
 import io.github.hungrycube.lessonwidget.render.StyleCustom
 import io.github.hungrycube.lessonwidget.render.Styles
 import io.github.hungrycube.lessonwidget.ui.AppTheme
-import io.github.hungrycube.lessonwidget.ui.GroupPicker
-import io.github.hungrycube.lessonwidget.ui.Section
+import io.github.hungrycube.lessonwidget.ui.GroupPickerScreen
 import io.github.hungrycube.lessonwidget.ui.StyleDraft
 import io.github.hungrycube.lessonwidget.ui.StylePicker
 import io.github.hungrycube.lessonwidget.ui.StyleSetupScreen
-import io.github.hungrycube.lessonwidget.ui.SubgroupChips
+import io.github.hungrycube.lessonwidget.ui.design.AppCard
+import io.github.hungrycube.lessonwidget.ui.design.Dims
+import io.github.hungrycube.lessonwidget.ui.design.Hint
+import io.github.hungrycube.lessonwidget.ui.design.LucideIcons
+import io.github.hungrycube.lessonwidget.ui.design.PillButton
+import io.github.hungrycube.lessonwidget.ui.design.PillKind
+import io.github.hungrycube.lessonwidget.ui.design.ScreenHeader
+import io.github.hungrycube.lessonwidget.ui.design.SectionLabel
+import io.github.hungrycube.lessonwidget.ui.design.Segmented
+import io.github.hungrycube.lessonwidget.ui.design.SelectMark
+import io.github.hungrycube.lessonwidget.ui.design.SettingsSection
+import io.github.hungrycube.lessonwidget.ui.design.Type
+import io.github.hungrycube.lessonwidget.ui.design.appColors
+import io.github.hungrycube.lessonwidget.ui.groupSubtitle
 import io.github.hungrycube.lessonwidget.ui.previewDisplay
 import io.github.hungrycube.lessonwidget.work.RefreshScheduler
 import kotlinx.coroutines.CoroutineScope
@@ -144,10 +152,10 @@ class ConfigureActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ConfigureScreen(appWidgetId: Int, setupOnly: Boolean, onDone: (WidgetConfig, StyleDraft) -> Unit, onCancel: () -> Unit) {
     val context = LocalContext.current
+    val c = appColors
     val settings = remember { Settings(context) }
     val existing = remember { WidgetConfigs(context).get(appWidgetId) }
     val appGroup = settings.defaultGroup
@@ -192,70 +200,82 @@ private fun ConfigureScreen(appWidgetId: Int, setupOnly: Boolean, onDone: (Widge
 
     if (picking) {
         val canBack = appGroup != null || ownGroup != null
-        BackHandler { if (canBack) picking = false else onCancel() }
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Группа для виджета") },
-                    navigationIcon = {
-                        IconButton(onClick = { if (canBack) picking = false else onCancel() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                        }
-                    },
-                )
+        GroupPickerScreen(
+            title = "Группа для виджета",
+            current = if (useAppGroup) appGroup else ownGroup,
+            onBack = { if (canBack) picking = false else onCancel() },
+            onPicked = {
+                ownGroup = it
+                useAppGroup = false
+                picking = false
             },
-        ) { padding ->
-            GroupPicker(
-                modifier = Modifier.padding(padding),
-                onPicked = {
-                    ownGroup = it
-                    useAppGroup = false
-                    picking = false
-                },
-            )
-        }
+        )
         return
     }
 
     val group = if (useAppGroup) appGroup else ownGroup
     val effectiveSubgroup = (subgroup ?: settings.subgroup).takeIf { it > 0 }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Виджет расписания") },
-                navigationIcon = {
-                    IconButton(onClick = onCancel) { Icon(Icons.Default.Close, contentDescription = "Отмена") }
-                },
-            )
-        },
-    ) { padding ->
+    val subgroups = remember(group) { group?.let { ScheduleRepository(context).load(it) }?.subgroupCount() ?: 0 }
+    val scroll = rememberScrollState()
+    BackHandler(onBack = onCancel)
+    Column(Modifier.fillMaxSize().background(c.bg)) {
+        ScreenHeader(
+            "Виджет расписания",
+            onBack = onCancel,
+            divider = scroll.value > 0,
+            backIcon = LucideIcons.close,
+            backDescription = "Отмена",
+        )
         Column(
             Modifier
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+                .weight(1f)
+                .verticalScroll(scroll)
+                .navigationBarsPadding()
+                .padding(start = Dims.side, end = Dims.side, top = 8.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
-            Section("Группа") {
-                if (appGroup != null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = useAppGroup, onClick = { useAppGroup = true })
-                        Text("Как в приложении — $appGroup")
+            SettingsSection("Группа") {
+                AppCard(padding = PaddingValues(0.dp)) {
+                    if (appGroup != null) {
+                        ChoiceRow(
+                            title = "Как в приложении",
+                            subtitle = listOfNotNull(appGroup, groupSubtitle(context, appGroup)).joinToString(" · "),
+                            selected = useAppGroup,
+                            divider = false,
+                            onClick = { useAppGroup = true },
+                        )
+                    }
+                    ChoiceRow(
+                        title = ownGroup ?: "Своя группа",
+                        subtitle = if (ownGroup != null) groupSubtitle(context, ownGroup) ?: "Своя группа" else "Любая группа любого факультета",
+                        selected = !useAppGroup,
+                        divider = appGroup != null,
+                        onClick = { if (ownGroup == null) picking = true else useAppGroup = false },
+                    ) {
+                        PillButton(if (ownGroup == null) "Выбрать" else "Изменить", onClick = { picking = true })
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = !useAppGroup,
-                        onClick = { if (ownGroup == null) picking = true else useAppGroup = false },
+            }
+            val maxSub = maxOf(subgroups, subgroup ?: 0)
+            if (maxSub > 0) {
+                SettingsSection("Подгруппа") {
+                    Segmented(
+                        options = listOf<Int?>(null, 0) + (1..maxSub).toList(),
+                        selected = subgroup,
+                        label = {
+                            when (it) {
+                                null -> "Как в прил."
+                                0 -> "Все"
+                                else -> "$it"
+                            }
+                        },
+                        onSelect = { subgroup = it },
                     )
-                    Text(ownGroup?.let { "Своя — $it" } ?: "Другая группа", modifier = Modifier.weight(1f))
-                    TextButton(onClick = { picking = true }) { Text("Выбрать") }
+                    Hint("«Как в прил.» — подгруппа из настроек приложения.")
                 }
             }
-            Section("Подгруппа") {
-                SubgroupChips(subgroup, onSelect = { subgroup = it }, withInherit = true)
-            }
-            Section("Стиль") {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionLabel("Стиль")
                 val photoFile = draft.newPhoto?.takeIf { it.isFile } ?: currentPhoto
                 StylePicker(
                     selected = style,
@@ -277,21 +297,58 @@ private fun ConfigureScreen(appWidgetId: Int, setupOnly: Boolean, onDone: (Widge
                 )
                 val selected = Styles.byId(context, style)
                 if (selected.usesPhoto || selected.options.isNotEmpty()) {
-                    OutlinedButton(onClick = { setup = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (selected.usesPhoto) "Фото и настройки стиля" else "Настройки стиля")
-                    }
+                    PillButton(
+                        if (selected.usesPhoto) "Фото и настройки стиля" else "Настройки стиля",
+                        onClick = { setup = true },
+                        kind = PillKind.Outline,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
-            Button(
-                enabled = group != null,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { onDone(WidgetConfig(group = if (useAppGroup) null else ownGroup, style = style, subgroup = subgroup), draft) },
-            ) { Text("Готово") }
-            Text(
-                "Тап по виджету открывает расписание на сегодня и неделю.",
-                style = MaterialTheme.typography.bodySmall,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                PillButton(
+                    "Готово",
+                    onClick = { onDone(WidgetConfig(group = if (useAppGroup) null else ownGroup, style = style, subgroup = subgroup), draft) },
+                    kind = PillKind.Primary,
+                    height = Dims.pillTall,
+                    enabled = group != null,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Hint("Тап по виджету открывает расписание на сегодня и неделю.")
+            }
         }
+    }
+}
+
+/** Строка выбора в карточке: отметка, заголовок с подписью и, если нужно, кнопка справа. */
+@Composable
+private fun ChoiceRow(
+    title: String,
+    subtitle: String?,
+    selected: Boolean,
+    divider: Boolean,
+    onClick: () -> Unit,
+    trailing: @Composable () -> Unit = {},
+) {
+    val c = appColors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 62.dp)
+            .drawBehind {
+                if (divider) drawLine(c.cardBorder, Offset(0f, 0.5.dp.toPx()), Offset(size.width, 0.5.dp.toPx()), strokeWidth = 1.dp.toPx())
+            }
+            .clickable(onClick = onClick)
+            .padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SelectMark(selected)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = Type.rowTitle, color = c.text)
+            if (!subtitle.isNullOrEmpty()) Text(subtitle, style = Type.caption, color = c.sec)
+        }
+        trailing()
     }
 }
 

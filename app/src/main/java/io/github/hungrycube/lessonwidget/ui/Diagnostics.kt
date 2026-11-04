@@ -13,11 +13,13 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -25,16 +27,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.hungrycube.lessonwidget.data.CrashLog
+import io.github.hungrycube.lessonwidget.ui.design.AppCard
+import io.github.hungrycube.lessonwidget.ui.design.Hint
+import io.github.hungrycube.lessonwidget.ui.design.LucideIcons
+import io.github.hungrycube.lessonwidget.ui.design.PillButton
+import io.github.hungrycube.lessonwidget.ui.design.PillKind
+import io.github.hungrycube.lessonwidget.ui.design.StatusDot
+import io.github.hungrycube.lessonwidget.ui.design.Type
+import io.github.hungrycube.lessonwidget.ui.design.appColors
 import io.github.hungrycube.lessonwidget.widget.WidgetUpdater
 import kotlinx.coroutines.launch
 
 /** Подсказка, если система не даёт виджету обновляться в фоне. */
 @Composable
-fun WidgetLagSection() {
+fun WidgetLagCard() {
     val context = LocalContext.current
+    val c = appColors
     val scope = rememberCoroutineScope()
     val pkg = context.packageName
     // Пересчитать состояние, когда пользователь вернётся из системных настроек.
@@ -58,61 +74,83 @@ fun WidgetLagSection() {
             context.getSystemService(AlarmManager::class.java)?.canScheduleExactAlarms() == true
     }
 
-    Text(
-        "Если виджет показывает старое время, скорее всего, система ограничивает приложение в фоне.",
-        style = MaterialTheme.typography.bodySmall,
-    )
-    if (!exactAllowed) {
-        Button(onClick = {
-            open(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$pkg")))
-        }) { Text("Разрешить точное время") }
+    AppCard(spacing = 10.dp) {
+        Text(
+            "Если виджет показывает старое время, скорее всего, система ограничивает приложение в фоне.",
+            style = Type.detail,
+            color = c.text,
+        )
+        if (!exactAllowed) {
+            PillButton("Разрешить точное время", onClick = {
+                open(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$pkg")))
+            }, kind = PillKind.Primary, modifier = Modifier.fillMaxWidth())
+        }
+        if (unrestricted) {
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                StatusDot(c.ok)
+                Text("Ограничений батареи нет", style = Type.meta, color = c.sec)
+            }
+        } else {
+            PillButton("Снять ограничения батареи", onClick = {
+                open(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$pkg")))
+            }, kind = PillKind.Primary, modifier = Modifier.fillMaxWidth())
+        }
+        Text(
+            "Xiaomi, Redmi, POCO (HyperOS, MIUI): в настройках приложения включите «Автозапуск», " +
+                "а в «Контроль активности» выберите «Нет ограничений».\n" +
+                "OPPO, realme, OnePlus (ColorOS): в настройках приложения откройте «Использование батареи» " +
+                "и разрешите работу в фоне и автозапуск.",
+            style = Type.small,
+            color = c.ter,
+        )
+        PillButton("Открыть настройки приложения", onClick = {
+            open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pkg")))
+        }, kind = PillKind.Outline, modifier = Modifier.fillMaxWidth())
     }
-    if (unrestricted) {
-        Text("Ограничений батареи нет.", style = MaterialTheme.typography.bodyMedium)
-    } else {
-        Button(onClick = {
-            open(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$pkg")))
-        }) { Text("Снять ограничения батареи") }
-    }
-    Text(
-        "Xiaomi, Redmi, POCO (HyperOS, MIUI): в настройках приложения включите «Автозапуск», " +
-            "а в «Контроль активности» выберите «Нет ограничений».\n" +
-            "OPPO, realme, OnePlus (ColorOS): в настройках приложения откройте «Использование батареи» " +
-            "и разрешите работу в фоне и автозапуск.",
-        style = MaterialTheme.typography.bodySmall,
-    )
-    OutlinedButton(onClick = {
-        open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pkg")))
-    }) { Text("Открыть настройки приложения") }
 }
 
 /** Последняя ошибка из журнала: показать, скопировать, отправить. */
 @Composable
-fun CrashReportSection() {
+fun CrashReportCard() {
     val context = LocalContext.current
+    val c = appColors
     var entries by remember { mutableStateOf(CrashLog.entries(context)) }
-    if (entries.isEmpty()) {
-        Text("Ошибок не было.", style = MaterialTheme.typography.bodyMedium)
-        return
+    AppCard(spacing = 10.dp) {
+        if (entries.isEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                StatusDot(c.ok)
+                Text("Ошибок не было", style = Type.body, color = c.text)
+            }
+        } else {
+            Text(
+                if (entries.size == 1) "Последняя ошибка:" else "Последняя ошибка (всего в журнале: ${entries.size}):",
+                style = Type.detail,
+                color = c.text,
+            )
+            Text(
+                entries.first().lines().take(20).joinToString("\n"),
+                style = Type.small.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 15.sp),
+                color = c.sec,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(c.soft)
+                    .padding(10.dp),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PillButton("Скопировать", onClick = { copyReport(context) }, modifier = Modifier.weight(1f))
+                PillButton("Отправить", onClick = { shareReport(context) }, kind = PillKind.Primary, icon = LucideIcons.send, modifier = Modifier.weight(1f))
+            }
+            PillButton("Очистить журнал", onClick = {
+                CrashLog.clear(context)
+                entries = emptyList()
+            }, kind = PillKind.Outline, modifier = Modifier.fillMaxWidth())
+            Hint(
+                "Отчёт уходит, только если вы сами его отправите. В нём версия приложения, модель телефона и техническое описание ошибки.",
+                Modifier.padding(end = 6.dp),
+            )
+        }
     }
-    Text(
-        if (entries.size == 1) "Последняя ошибка:" else "Последняя ошибка (всего в журнале: ${entries.size}):",
-        style = MaterialTheme.typography.bodyMedium,
-    )
-    Text(
-        entries.first().lines().take(20).joinToString("\n"),
-        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-    )
-    Button(onClick = { copyReport(context) }) { Text("Скопировать") }
-    Button(onClick = { shareReport(context) }) { Text("Отправить в Telegram") }
-    TextButton(onClick = {
-        CrashLog.clear(context)
-        entries = emptyList()
-    }) { Text("Очистить журнал") }
-    Text(
-        "Отчёт уходит, только если вы сами его отправите. В нём версия приложения, модель телефона и техническое описание ошибки.",
-        style = MaterialTheme.typography.bodySmall,
-    )
 }
 
 private fun copyReport(context: Context) {

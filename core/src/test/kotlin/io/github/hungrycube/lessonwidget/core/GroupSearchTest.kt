@@ -1,6 +1,9 @@
 package io.github.hungrycube.lessonwidget.core
 
+import io.github.hungrycube.lessonwidget.core.groups.Faculties
 import io.github.hungrycube.lessonwidget.core.groups.GroupSearch
+import io.github.hungrycube.lessonwidget.core.groups.describe
+import io.github.hungrycube.lessonwidget.core.groups.subgroupCount
 import io.github.hungrycube.lessonwidget.core.parse.NstuParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -43,6 +46,37 @@ class GroupSearchTest {
     fun exactFind() {
         assertEquals("ЭМ-63", GroupSearch.find("эм-63", groups)?.name)
         assertNull(GroupSearch.find("ЭМ-6", groups))
+    }
+
+    @Test
+    fun anyPartOfCode() {
+        // «63» — часть номера: ЭМ-63 находится среди всех групп с 63 в коде.
+        assertTrue(GroupSearch.search("63", groups, limit = 500).any { it.name == "ЭМ-63" })
+        assertTrue(GroupSearch.search("м-6", groups, limit = 500).any { it.name == "ЭМ-63" })
+    }
+
+    @Test
+    fun facultiesAndDescription() {
+        assertEquals("ФМА", Faculties.short("Факультет мехатроники и автоматизации"))
+        assertEquals("АВТФ", Faculties.short("Факультет автоматики и вычислительной техники"))
+        assertEquals("ФМА", Faculties.fromTitle("ФМА · ЭМ-63", "ЭМ-63"))
+        assertNull(Faculties.fromTitle("ЭМ-63", "ЭМ-63"))
+        val em63 = groups.first { it.name == "ЭМ-63" }
+        assertEquals("ФМА · бакалавриат, специалитет", em63.describe())
+        // Каждая группа списка подписана, факультеты — коротко.
+        assertTrue(groups.all { Faculties.short(it.faculty).length <= 6 })
+    }
+
+    @Test
+    fun subgroups() {
+        val abs = io.github.hungrycube.lessonwidget.core.parse.ScheduleAssembler.assemble(
+            group = "АБс-322",
+            semester = NstuParser.parseSchedulePage(Samples.read("schedule_ABs-322_semester.html")),
+            week = null,
+            fetchedAt = 0L,
+            today = Samples.SAMPLE_DAY,
+        )
+        assertTrue(abs.subgroupCount() >= 3)
     }
 
     @Test

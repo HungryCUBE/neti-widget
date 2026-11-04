@@ -22,7 +22,6 @@ compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeB
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-foundation = { module = "androidx.compose.foundation:foundation" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
-compose-material-icons = { module = "androidx.compose.material:material-icons-core" }
 palette = { module = "androidx.palette:palette-ktx", version.ref = "palette" }
 exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "exifinterface" }
 glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }

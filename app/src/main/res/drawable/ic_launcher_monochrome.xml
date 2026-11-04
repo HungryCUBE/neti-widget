@@ -1,10 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Тематическая иконка Android 13+: силуэты двух полос и кнопки «>», цвет задаёт система. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Полоса «сейчас»: контур с вырезом и прогресс внутри -->
     <path
         android:fillColor="#FF000000"
-        android:pathData="M35,34h38a7,7 0,0 1,7 7v26a7,7 0,0 1,-7 7h-38a7,7 0,0 1,-7 -7v-26a7,7 0,0 1,7 -7zM35.5,42a2,2 0,0 0,0 4h26a2,2 0,0 0,0 -4zM35.5,50a1.5,1.5 0,0 0,0 3h16a1.5,1.5 0,0 0,0 -3zM35,64a1.5,1.5 0,0 0,0 3h22a1.5,1.5 0,0 0,0 -3z" />
+        android:fillType="evenOdd"
+        android:pathData="M36,36h36a8,8 0,0 1,0 16h-36a8,8 0,0 1,0 -16zM36,38.2a5.8,5.8 0,0 0,0 11.6h36a5.8,5.8 0,0 0,0 -11.6z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M36,39.6h21a4.4,4.4 0,0 1,0 8.8h-21a4.4,4.4 0,0 1,0 -8.8z" />
+    <!-- Полоса «далее» с вырезанной чертой -->
+    <path
+        android:fillAlpha="0.55"
+        android:fillColor="#FF000000"
+        android:fillType="evenOdd"
+        android:pathData="M34.5,57h27a6.5,6.5 0,0 1,0 13h-27a6.5,6.5 0,0 1,0 -13zM33.5,62a1.5,1.5 0,0 0,0 3h17a1.5,1.5 0,0 0,0 -3z" />
+    <!-- Кнопка с вырезанной стрелкой -->
+    <path
+        android:fillColor="#FF000000"
+        android:fillType="evenOdd"
+        android:pathData="M74.2,57h2.6a3.2,3.2 0,0 1,3.2 3.2v6.6a3.2,3.2 0,0 1,-3.2 3.2h-2.6a3.2,3.2 0,0 1,-3.2 -3.2v-6.6a3.2,3.2 0,0 1,3.2 -3.2zM74.52,59.82L78.37,63.49L74.52,67.17L73.14,65.73L75.47,63.49L73.14,61.26z" />
 </vector>

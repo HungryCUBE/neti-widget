@@ -92,7 +92,7 @@ class ScheduleRepository(context: Context) {
     }
 }
 
-/** Список всех групп с сайта. Обновляется не чаще раза в неделю. */
+/** Список всех групп всех факультетов с сайта. Обновляется вместе с расписанием, не чаще раза в сутки. */
 class GroupsRepository(context: Context) {
     private val file = File(context.applicationContext.filesDir, "groups.json")
 
@@ -104,13 +104,22 @@ class GroupsRepository(context: Context) {
 
     fun cachedAt(): Long = if (file.exists()) file.lastModified() else 0L
 
-    fun isStale(): Boolean = System.currentTimeMillis() - cachedAt() > 7L * 24 * 3600 * 1000
+    fun isStale(): Boolean = System.currentTimeMillis() - cachedAt() > 20L * 3600 * 1000
+
+    /** Группа из сохранённого списка по имени. */
+    fun find(name: String?): GroupInfo? = name?.let { n -> cached().firstOrNull { it.name == n } }
 
     suspend fun refresh(): List<GroupInfo> = withContext(Dispatchers.IO) {
         val groups = NstuParser.parseGroups(Net.get(BASE))
         if (groups.isEmpty()) throw IllegalStateException("Список групп пуст")
-        AtomicFile(file).writeAtomically(json.encodeToString(ListSerializer(GroupInfo.serializer()), groups).toByteArray(Charsets.UTF_8))
+        store(groups)
         groups
+    }
+
+    /** Заменяет сохранённый список целиком. */
+    internal fun store(groups: List<GroupInfo>) {
+        file.parentFile?.mkdirs()
+        AtomicFile(file).writeAtomically(json.encodeToString(ListSerializer(GroupInfo.serializer()), groups).toByteArray(Charsets.UTF_8))
     }
 
     /** Проверка введённой вручную группы: есть ли у неё расписание на сайте. Возвращает заголовок страницы. */

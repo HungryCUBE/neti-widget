@@ -4,20 +4,12 @@ import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +22,7 @@ import io.github.hungrycube.lessonwidget.data.CrashLog
 import io.github.hungrycube.lessonwidget.render.theme.WallpaperPalette
 import io.github.hungrycube.lessonwidget.data.ScheduleRepository
 import io.github.hungrycube.lessonwidget.data.Settings
+import io.github.hungrycube.lessonwidget.ui.design.appColors
 import io.github.hungrycube.lessonwidget.widget.ConfigureActivity
 import io.github.hungrycube.lessonwidget.widget.WidgetUpdater
 import io.github.hungrycube.lessonwidget.widget.Widgets
@@ -81,7 +74,6 @@ class MainActivity : ComponentActivity() {
 
 private enum class Screen { PICK, SCHEDULE, SETTINGS }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppRoot(args: LaunchArgs) {
     val context = LocalContext.current
@@ -89,69 +81,56 @@ private fun AppRoot(args: LaunchArgs) {
     val scope = rememberCoroutineScope()
     var defaultGroup by remember { mutableStateOf(settings.defaultGroup) }
     var screen by rememberSaveable { mutableStateOf(if (defaultGroup == null) Screen.PICK else Screen.SCHEDULE) }
+    // Куда вернуться из выбора группы по «Назад».
+    var pickReturn by rememberSaveable { mutableStateOf(Screen.SCHEDULE) }
     var viewGroup by remember(args) { mutableStateOf(args.group ?: defaultGroup) }
     // Открыли с виджета — показываем его группу, а карандаш настраивает именно этот виджет.
     val widgetId = args.appWidgetId?.takeIf { args.group != null }
 
-    when (screen) {
-        Screen.PICK -> {
-            val canGoBack = defaultGroup != null
-            if (canGoBack) BackHandler { screen = Screen.SETTINGS }
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text(if (canGoBack) "Другая группа" else "Выберите свою группу") },
-                        navigationIcon = {
-                            if (canGoBack) {
-                                IconButton(onClick = { screen = Screen.SETTINGS }) {
-                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                                }
-                            }
-                        },
-                    )
+    Box(Modifier.fillMaxSize().background(appColors.bg)) {
+        when (screen) {
+            Screen.PICK -> GroupPickerScreen(
+                title = "Выбор группы",
+                current = defaultGroup,
+                onBack = { screen = pickReturn },
+                onPicked = { g ->
+                    settings.defaultGroup = g
+                    defaultGroup = g
+                    viewGroup = g
+                    screen = Screen.SCHEDULE
+                    val app = context.applicationContext
+                    scope.launch {
+                        ScheduleRepository(app).deleteUnused(Widgets.groupsInUse(app))
+                        WidgetUpdater.updateAll(app)
+                    }
                 },
-            ) { padding ->
-                GroupPicker(
-                    modifier = Modifier.padding(padding),
-                    onPicked = { g ->
-                        settings.defaultGroup = g
-                        defaultGroup = g
-                        viewGroup = g
-                        screen = Screen.SCHEDULE
-                        val app = context.applicationContext
-                        scope.launch {
-                            ScheduleRepository(app).deleteUnused(Widgets.groupsInUse(app))
-                            WidgetUpdater.updateAll(app)
-                        }
-                    },
-                )
-            }
+            )
+            Screen.SCHEDULE -> ScheduleScreen(
+                group = viewGroup ?: defaultGroup,
+                onSettings = { screen = Screen.SETTINGS },
+                onPickGroup = {
+                    pickReturn = Screen.SCHEDULE
+                    screen = Screen.PICK
+                },
+                onConfigureWidget = widgetId?.let { id ->
+                    {
+                        context.startActivity(
+                            Intent(context, ConfigureActivity::class.java)
+                                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id),
+                        )
+                    }
+                },
+            )
+            Screen.SETTINGS -> SettingsScreen(
+                onBack = {
+                    viewGroup = defaultGroup
+                    screen = Screen.SCHEDULE
+                },
+                onChangeGroup = {
+                    pickReturn = Screen.SETTINGS
+                    screen = Screen.PICK
+                },
+            )
         }
-        Screen.SCHEDULE -> {
-            val group = viewGroup ?: defaultGroup
-            if (group == null) {
-                LaunchedEffect(Unit) { screen = Screen.PICK }
-            } else {
-                ScheduleScreen(
-                    group = group,
-                    onSettings = { screen = Screen.SETTINGS },
-                    onConfigureWidget = widgetId?.let { id ->
-                        {
-                            context.startActivity(
-                                Intent(context, ConfigureActivity::class.java)
-                                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id),
-                            )
-                        }
-                    },
-                )
-            }
-        }
-        Screen.SETTINGS -> SettingsScreen(
-            onBack = {
-                viewGroup = defaultGroup
-                screen = Screen.SCHEDULE
-            },
-            onChangeGroup = { screen = Screen.PICK },
-        )
     }
 }
