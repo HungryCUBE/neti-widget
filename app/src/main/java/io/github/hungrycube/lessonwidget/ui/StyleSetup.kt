@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -167,6 +168,9 @@ fun StyleSetupScreen(
         }
     }
     fun done() = onDone(StyleDraft(options, frame, newPhoto))
+    fun pickPhoto() = picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    // Пока фото нет, превью — заглушка «Нажмите, чтобы выбрать фото»: нажатие в любом месте открывает галерею.
+    val tapToPick = style.usesPhoto && bitmap == null && !importing
 
     BackHandler(onBack = onBack)
     Scaffold(
@@ -192,7 +196,8 @@ fun StyleSetupScreen(
                     .fillMaxWidth()
                     .height(210.dp)
                     .clip(RoundedCornerShape(26.dp))
-                    .background(Color(0xFF2B2E36)),
+                    .background(Color(0xFF2B2E36))
+                    .then(if (tapToPick) Modifier.clickable(onClickLabel = "Выбрать фото", onClick = ::pickPhoto) else Modifier),
                 contentAlignment = Alignment.Center,
             ) {
                 if (style.usesPhoto) {
@@ -264,7 +269,7 @@ fun StyleSetupScreen(
                     Button(
                         enabled = !importing,
                         modifier = Modifier.weight(1f).height(46.dp),
-                        onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                        onClick = ::pickPhoto,
                     ) {
                         if (importing) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text("Выбрать из галереи")
                     }
