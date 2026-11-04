@@ -26,6 +26,11 @@ class Settings(context: Context) {
         recentGroups = (listOf(group) + recentGroups.filter { it != group }).take(5)
     }
 
+    /** Тема приложения: «auto» — как в системе, «light», «dark». */
+    var theme: String
+        get() = prefs.getString("theme", "auto") ?: "auto"
+        set(value) = prefs.edit { putString("theme", value) }
+
     var defaultStyle: String
         get() = prefs.getString("default_style", Styles.DEFAULT_ID) ?: Styles.DEFAULT_ID
         set(value) = prefs.edit { putString("default_style", value) }

@@ -178,6 +178,21 @@ fun SettingsScreen(onBack: () -> Unit, onChangeGroup: () -> Unit) {
                     Hint("Пары другой подгруппы не показываются. Отдельному виджету можно выбрать свою.")
                 }
             }
+            SettingsSection("Тема приложения") {
+                Segmented(
+                    options = listOf("auto", "light", "dark"),
+                    selected = ThemeChoice.mode,
+                    label = {
+                        when (it) {
+                            "light" -> "Светлая"
+                            "dark" -> "Тёмная"
+                            else -> "Авто"
+                        }
+                    },
+                    onSelect = { ThemeChoice.set(context, it) },
+                )
+                Hint("«Авто» — как в системе. На виджет не влияет, у него свой стиль.")
+            }
             SettingsSection("Виджет") {
                 AppCard(padding = PaddingValues(start = 18.dp, top = 14.dp, end = 16.dp, bottom = 14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
