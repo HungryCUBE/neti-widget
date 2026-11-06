@@ -1,0 +1,18 @@
+== app/build/outputs/apk/debug/app-debug.apk 15294295 байт
+package: name='io.github.hungrycube.lessonwidget.debug' versionCode='10101' versionName='1.1.1' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+minSdkVersion:'26'
+targetSdkVersion:'36'
+uses-permission: name='android.permission.INTERNET'
+uses-permission: name='android.permission.ACCESS_NETWORK_STATE'
+V2 Signer: certificate DN: C=US, O=Android, CN=Android Debug
+V2 Signer: certificate SHA-256 digest: 8db018532802c6da6825facca1f736d56b67c1a900c7bd6a8141d46e08bac03a
+V2 Signer: certificate SHA-1 digest: e3df070438ddd9d9a6765269cb961f8f6b628821
+V2 Signer: certificate MD5 digest: 1d6b761ddffc61880d31b9b44d8578b2
+== app/build/outputs/apk/release/app-release-unsigned.apk 4862617 байт
+package: name='io.github.hungrycube.lessonwidget' versionCode='10101' versionName='1.1.1' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+minSdkVersion:'26'
+targetSdkVersion:'36'
+uses-permission: name='android.permission.INTERNET'
+uses-permission: name='android.permission.ACCESS_NETWORK_STATE'
+DOES NOT VERIFY
+ERROR: Missing META-INF/MANIFEST.MF
