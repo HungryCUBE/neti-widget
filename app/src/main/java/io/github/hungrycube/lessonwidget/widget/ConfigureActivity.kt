@@ -356,8 +356,6 @@ private fun ChoiceRow(
 
 /** Размер виджета в dp, как его видит лаунчер в портрете; если ещё неизвестен — стандартный 4×2. */
 private fun widgetSizeDp(context: android.content.Context, appWidgetId: Int): Pair<Float, Float> {
-    val o = AppWidgetManager.getInstance(context).getAppWidgetOptions(appWidgetId)
-    val w = o?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) ?: 0
-    val h = o?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT) ?: 0
-    return if (w > 0 && h > 0) w.toFloat() to h.toFloat() else 316f to 168f
+    val size = AppWidgetManager.getInstance(context).getAppWidgetOptions(appWidgetId)?.let(WidgetSizes::from)?.portrait
+    return if (size != null) size.width.value to size.height.value else 316f to 168f
 }

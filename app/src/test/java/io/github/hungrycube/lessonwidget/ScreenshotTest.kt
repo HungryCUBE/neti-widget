@@ -7,6 +7,8 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import io.github.hungrycube.lessonwidget.core.display.DisplayBuilder
 import io.github.hungrycube.lessonwidget.core.display.Phase
@@ -23,6 +25,7 @@ import io.github.hungrycube.lessonwidget.render.StyleCustom
 import io.github.hungrycube.lessonwidget.render.Styles
 import io.github.hungrycube.lessonwidget.render.WidgetRenderer
 import io.github.hungrycube.lessonwidget.render.WidgetStyle
+import io.github.hungrycube.lessonwidget.widget.WidgetSizes
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -186,6 +189,7 @@ class ScreenshotTest {
             "2×4 150×340" to (150f to 340f),
             "3×2 240×168" to (240f to 168f),
             "4×1 316×110" to (316f to 110f),
+            "низкий 380×80" to WidgetSizes.forRender(DpSize(380.dp, 80.dp)).let { it.width.value to it.height.value },
             "4×2 316×168" to (316f to 168f),
             "4×2 крупный 360×190" to (360f to 190f),
             "4×2 ландшафт 520×130" to (520f to 130f),

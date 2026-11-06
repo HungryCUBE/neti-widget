@@ -44,6 +44,7 @@ import io.github.hungrycube.lessonwidget.ui.design.StatusDot
 import io.github.hungrycube.lessonwidget.ui.design.Type
 import io.github.hungrycube.lessonwidget.ui.design.appColors
 import io.github.hungrycube.lessonwidget.widget.WidgetUpdater
+import io.github.hungrycube.lessonwidget.widget.Widgets
 import kotlinx.coroutines.launch
 
 /** Подсказка, если система не даёт виджету обновляться в фоне. */
@@ -121,6 +122,8 @@ fun CrashReportCard() {
                 StatusDot(c.ok)
                 Text("Ошибок не было", style = Type.body, color = c.text)
             }
+            Hint("Если виджет выглядит странно, скопируйте сведения о нём и пришлите автору.", Modifier.padding(end = 6.dp))
+            PillButton("Скопировать сведения о виджете", onClick = { copyReport(context) }, modifier = Modifier.fillMaxWidth())
         } else {
             Text(
                 if (entries.size == 1) "Последняя ошибка:" else "Последняя ошибка (всего в журнале: ${entries.size}):",
@@ -153,9 +156,11 @@ fun CrashReportCard() {
     }
 }
 
+private fun fullReport(context: Context) = CrashLog.report(context).trimEnd() + "\n\n" + Widgets.sizeReport(context)
+
 private fun copyReport(context: Context) {
     val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
-    clipboard.setPrimaryClip(ClipData.newPlainText("Отчёт об ошибке", CrashLog.report(context)))
+    clipboard.setPrimaryClip(ClipData.newPlainText("Отчёт об ошибке", fullReport(context)))
     // С Android 13 система сама показывает, что текст скопирован.
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         Toast.makeText(context, "Скопировано", Toast.LENGTH_SHORT).show()
@@ -165,7 +170,7 @@ private fun copyReport(context: Context) {
 private fun shareReport(context: Context) {
     val send = Intent(Intent.ACTION_SEND)
         .setType("text/plain")
-        .putExtra(Intent.EXTRA_TEXT, CrashLog.report(context))
+        .putExtra(Intent.EXTRA_TEXT, fullReport(context))
     try {
         context.startActivity(Intent(send).setPackage("org.telegram.messenger"))
     } catch (e: ActivityNotFoundException) {

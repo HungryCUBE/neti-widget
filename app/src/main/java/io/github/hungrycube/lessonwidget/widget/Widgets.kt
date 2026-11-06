@@ -3,6 +3,10 @@ package io.github.hungrycube.lessonwidget.widget
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import android.os.Build
+import android.util.SizeF
+import androidx.core.os.BundleCompat
+import io.github.hungrycube.lessonwidget.BuildConfig
 import io.github.hungrycube.lessonwidget.core.display.DisplayBuilder
 import io.github.hungrycube.lessonwidget.core.display.Phase
 import io.github.hungrycube.lessonwidget.core.display.WidgetDisplay
@@ -70,6 +74,26 @@ object Widgets {
         val schedule = ScheduleRepository(context).load(group)
         val display = DisplayBuilder.build(schedule, group, subgroup, nowMillis)
         return if (shortTitles && display.phase != Phase.NO_DATA) display.withShortTitles() else display
+    }
+
+    /** Что лаунчер сообщает о размерах: если виджет выглядит странно, по этому видно почему. */
+    fun sizeReport(context: Context): String = buildString {
+        val manager = AppWidgetManager.getInstance(context)
+        val dm = context.resources.displayMetrics
+        appendLine("Телефон: ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}")
+        appendLine("Приложение: ${BuildConfig.VERSION_NAME}")
+        appendLine("Экран: ${dm.widthPixels}×${dm.heightPixels}, плотность ${dm.density}")
+        for (id in ids(context)) {
+            val o = manager.getAppWidgetOptions(id) ?: continue
+            val list = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                BundleCompat.getParcelableArrayList(o, AppWidgetManager.OPTION_APPWIDGET_SIZES, SizeF::class.java)
+            } else {
+                null
+            }
+            append("Виджет $id: ширина ${o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)}–${o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH)}")
+            append(", высота ${o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)}–${o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)}")
+            appendLine(", размеры ${list.orEmpty().joinToString()}")
+        }
     }
 
     /** Группы, которые нужны приложению и виджетам — их кэш обновляется, остальные удаляются. */

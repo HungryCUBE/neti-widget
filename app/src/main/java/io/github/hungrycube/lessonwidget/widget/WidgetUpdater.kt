@@ -8,11 +8,11 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
-import android.util.SizeF
+import android.widget.RemoteViews
 import androidx.annotation.VisibleForTesting
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.core.os.BundleCompat
+import androidx.glance.GlanceId
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.compose
 import io.github.hungrycube.lessonwidget.core.display.Phase
@@ -109,11 +109,7 @@ object WidgetUpdater {
                 try {
                     withTimeout(RENDER_TIMEOUT_MS) {
                         trace.step("Glance")
-                        if (hasSize(options)) {
-                            ScheduleWidget().compose(app, glanceId, options = options)
-                        } else {
-                            ScheduleWidget().compose(app, glanceId, size = DEFAULT_SIZE)
-                        }
+                        composeViews(app, glanceId, WidgetSizes.from(options) ?: WidgetSizes(DEFAULT_SIZE, DEFAULT_SIZE))
                     }
                 } finally {
                     current = null
@@ -172,16 +168,11 @@ object WidgetUpdater {
     /** Запись в журнал о долгой отрисовке: в тексте — этапы и их время. */
     private class SlowRender(message: String, cause: Throwable? = null) : Exception(message, cause)
 
-    /** Сообщил ли лаунчер размер виджета. Сразу после добавления его может ещё не быть. */
-    private fun hasSize(options: Bundle): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val sizes = BundleCompat.getParcelableArrayList(options, AppWidgetManager.OPTION_APPWIDGET_SIZES, SizeF::class.java)
-            if (!sizes.isNullOrEmpty() && sizes.all { it.width > 0f && it.height > 0f }) return true
-        }
-        return options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) > 0 &&
-            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) > 0 &&
-            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) > 0 &&
-            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT) > 0
+    /** Картинка для портрета и картинка для ландшафта; система выбирает их только по ориентации экрана (см. [WidgetSizes]). */
+    internal suspend fun composeViews(context: Context, glanceId: GlanceId, sizes: WidgetSizes): RemoteViews {
+        val portrait = ScheduleWidget().compose(context, glanceId, size = sizes.portrait)
+        if (sizes.landscape == sizes.portrait) return portrait
+        return RemoteViews(ScheduleWidget().compose(context, glanceId, size = sizes.landscape), portrait)
     }
 
     /** Ставит будильники на ближайшие моменты, когда хоть один виджет должен измениться. */

@@ -61,7 +61,7 @@ class ScheduleWidget : GlanceAppWidget() {
 @Composable
 private fun WidgetContent(context: Context, appWidgetId: Int) {
     // Размера может не быть, если лаунчер ещё не сообщил его, — тогда макетный 4×2.
-    val size = LocalSize.current.takeIf { it.width.value > 0f && it.height.value > 0f } ?: WidgetUpdater.DEFAULT_SIZE
+    val size = WidgetSizes.forRender(LocalSize.current.takeIf { it.width.value > 0f && it.height.value > 0f } ?: WidgetUpdater.DEFAULT_SIZE)
     // Состояние всегда считается от текущего времени, а не от того, какой будильник сработал.
     val now = WidgetUpdater.now()
     val maxPixels = bitmapBudget(context, LocalAppWidgetOptions.current)
@@ -96,7 +96,9 @@ private fun WidgetContent(context: Context, appWidgetId: Int) {
             provider = ImageProvider(rendered.bitmap),
             contentDescription = rendered.description,
             modifier = GlanceModifier.fillMaxSize(),
-            contentScale = ContentScale.FillBounds,
+            // Настоящую область виджета знает только лаунчер, и она может отличаться от сообщённой.
+            // Картинка вписывается целиком, с сохранением пропорций, и никогда не растягивается.
+            contentScale = ContentScale.Fit,
         )
     }
 }
