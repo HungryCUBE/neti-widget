@@ -132,7 +132,8 @@ class WidgetSizesTest {
         val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(id)
         val sizes = WidgetSizes.pick(listOf(landscape, portrait), 0, 0, 0, 0)!!
         val views = WidgetUpdater.composeViews(context, glanceId, sizes)
-        views.apply(context, FrameLayout(context)).images().single()
+        // Кроме картинки в дереве есть служебный ImageView Glance для эффекта нажатия, без растрового рисунка.
+        views.apply(context, FrameLayout(context)).images().single { it.drawable is BitmapDrawable }
     }
 
     private fun assertShown(image: ImageView, expectedAspect: Float) {
